@@ -1,0 +1,37 @@
+- route:
+    id: legacy-transform
+    from:
+      uri: "direct:transform"
+      steps:
+        - choice:
+            when:
+              - simple: "${header.targetUrl} != null"
+                steps:
+                  - setHeader:
+                      name: CamelHttpMethod
+                      constant: GET
+                  - toD:
+                      uri: "${header.targetUrl}"
+            otherwise:
+              steps:
+                - setHeader:
+                    name: CamelHttpMethod
+                    constant: GET
+                - toD:
+                    uri: "http:{{legacy.baseUrl}}${header.CamelHttpPath}"
+        - convertBodyTo:
+            type: java.lang.String
+        - choice:
+            when:
+              - simple: "${header.transformScriptResource} != null"
+                steps:
+                  - setHeader:
+                      name: scriptUri
+                      simple: "${header.transformScriptResource}"
+            otherwise:
+              steps:
+                - setHeader:
+                    name: scriptUri
+                    simple: "{{mcp.defaultTransformScript}}"
+        - toD:
+            uri: "language:groovy:resourceUri=${header.scriptUri}?cache=false"

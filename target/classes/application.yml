@@ -1,0 +1,21 @@
+spring:
+  main:
+    banner-mode: console
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+camel:
+  springboot:
+    routes-include-pattern: classpath:routes/*.yaml
+
+# Where to call legacy HTTP if not specified explicitly
+legacy:
+  baseUrl: "http://localhost:9000"
+
+mcp:
+  defaultTransformScript: "classpath:scripts/transform.groovy"
+
+server:
+  port: 8080
+
