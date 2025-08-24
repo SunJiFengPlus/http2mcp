@@ -66,17 +66,12 @@ class HttpRequestRouteIntegrationTest {
         headers.put("accept", "text/plain");
         request.setHeaders(headers);
 
-        try {
-            HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
-            
-            // 如果没有抛出异常，验证错误状态码被正确封装
-            assertThat(response).isNotNull();
-            assertThat(response.getStatusCode()).isGreaterThanOrEqualTo(400);
-        } catch (Exception e) {
-            // 验证异常是HTTP相关的错误
-            assertThat(e.getCause()).isNotNull();
-            assertThat(e.getCause().getClass().getSimpleName()).contains("Http");
-        }
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
+        
+        // 验证错误状态码被正确透传给上游
+        assertThat(response).isNotNull();
+        assertThat(response.getStatusCode()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
     }
 
     @Test

@@ -36,7 +36,12 @@ public class HttpRequestRoute extends RouteBuilder {
         HttpRequestBean request = exchange.getIn().getBody(HttpRequestBean.class);
         
         exchange.getIn().setHeader(Exchange.HTTP_METHOD, request.getMethod());
-        exchange.getIn().setHeader("HTTP_ENDPOINT", request.buildFullUrl());
+        
+        // 构建完整的URL并添加throwExceptionOnFailure=false参数
+        String fullUrl = request.buildFullUrl();
+        String httpEndpoint = fullUrl + (fullUrl.contains("?") ? "&" : "?") + "throwExceptionOnFailure=false";
+        exchange.getIn().setHeader("HTTP_ENDPOINT", httpEndpoint);
+        
         request.getHeaders().forEach((k, v) -> exchange.getIn().setHeader(k, v));
         
         String body = request.getBody();
