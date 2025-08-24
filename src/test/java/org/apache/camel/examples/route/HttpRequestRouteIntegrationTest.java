@@ -3,6 +3,7 @@ package org.apache.camel.examples.route;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.examples.model.HttpRequestBean;
+import org.apache.camel.examples.model.HttpResponseBean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,10 +37,13 @@ class HttpRequestRouteIntegrationTest {
         
         request.setBody("{\"message\":\"test\"}");
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
-        assertThat(response).contains("test-value");
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getStatusText()).isEqualTo("OK");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("test-value");
     }
 
     @Test
@@ -49,10 +53,13 @@ class HttpRequestRouteIntegrationTest {
         request.setUrl("http://httpbin.org/get");
         request.setHeaders(new HashMap<>());
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
-        assertThat(response).contains("get");
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getStatusText()).isEqualTo("OK");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("get");
     }
 
     @Test
@@ -66,11 +73,11 @@ class HttpRequestRouteIntegrationTest {
         request.setHeaders(headers);
 
         try {
-            String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+            HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
             
-            // httpbin.org/status/400 会返回400状态码
-            // Camel会抛出HttpOperationFailedException，这是预期行为
+            // 如果没有抛出异常，验证错误状态码被正确封装
             assertThat(response).isNotNull();
+            assertThat(response.getStatusCode()).isGreaterThanOrEqualTo(400);
         } catch (Exception e) {
             // 验证异常是HTTP相关的错误
             assertThat(e.getCause()).isNotNull();
@@ -93,11 +100,14 @@ class HttpRequestRouteIntegrationTest {
         headers.put("accept", "application/json");
         request.setHeaders(headers);
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
-        assertThat(response).contains("X-Test-Header");
-        assertThat(response).contains("test-header-value");
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("X-Test-Header");
+        assertThat(response.getBody()).contains("test-header-value");
+        assertThat(response.getHeaders()).isNotNull();
     }
 
     @Test
@@ -114,12 +124,16 @@ class HttpRequestRouteIntegrationTest {
         String requestBody = "{\"message\":\"response-body-test\",\"timestamp\":\"2024-01-01\"}";
         request.setBody(requestBody);
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
-        assertThat(response).contains("response-body-test");
-        assertThat(response).contains("2024-01-01");
-        assertThat(response).contains("json");
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getStatusText()).isEqualTo("OK");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("response-body-test");
+        assertThat(response.getBody()).contains("2024-01-01");
+        assertThat(response.getBody()).contains("json");
+        assertThat(response.getHeaders()).isNotNull();
     }
 
     @Test
@@ -134,14 +148,17 @@ class HttpRequestRouteIntegrationTest {
         headers.put("Authorization", "Bearer downstream-token");
         request.setHeaders(headers);
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getBody()).isNotNull();
         // httpbin.org/headers 会返回请求中的所有header
-        assertThat(response).contains("X-Custom-Downstream-Header");
-        assertThat(response).contains("downstream-test-value");
-        assertThat(response).contains("Camel-Http-Test/1.0");
-        assertThat(response).contains("Bearer downstream-token");
+        assertThat(response.getBody()).contains("X-Custom-Downstream-Header");
+        assertThat(response.getBody()).contains("downstream-test-value");
+        assertThat(response.getBody()).contains("Camel-Http-Test/1.0");
+        assertThat(response.getBody()).contains("Bearer downstream-token");
+        assertThat(response.getHeaders()).isNotNull();
     }
 
     @Test
@@ -158,15 +175,19 @@ class HttpRequestRouteIntegrationTest {
         String requestBody = "{\"operation\":\"request-body-test\",\"data\":{\"field1\":\"value1\",\"field2\":123}}";
         request.setBody(requestBody);
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getStatusText()).isEqualTo("OK");
+        assertThat(response.getBody()).isNotNull();
         // httpbin.org/post 会在响应中回显请求体
-        assertThat(response).contains("request-body-test");
-        assertThat(response).contains("field1");
-        assertThat(response).contains("value1");
-        assertThat(response).contains("field2");
-        assertThat(response).contains("123");
+        assertThat(response.getBody()).contains("request-body-test");
+        assertThat(response.getBody()).contains("field1");
+        assertThat(response.getBody()).contains("value1");
+        assertThat(response.getBody()).contains("field2");
+        assertThat(response.getBody()).contains("123");
+        assertThat(response.getHeaders()).isNotNull();
     }
 
     @Test
@@ -185,12 +206,47 @@ class HttpRequestRouteIntegrationTest {
         headers.put("accept", "application/json");
         request.setHeaders(headers);
 
-        String response = producerTemplate.requestBody("direct:httpRequest", request, String.class);
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
         
         assertThat(response).isNotNull();
-        assertThat(response).contains("param1");
-        assertThat(response).contains("value1");
-        assertThat(response).contains("param2");
-        assertThat(response).contains("param3");
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getStatusText()).isEqualTo("OK");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("param1");
+        assertThat(response.getBody()).contains("value1");
+        assertThat(response.getBody()).contains("param2");
+        assertThat(response.getBody()).contains("param3");
+        assertThat(response.getHeaders()).isNotNull();
+    }
+
+    @Test
+    void shouldProvideCompleteHttpResponseObject() {
+        HttpRequestBean request = new HttpRequestBean();
+        request.setMethod("GET");
+        request.setUrl("http://httpbin.org/get");
+        
+        Map<String, String> headers = new HashMap<>();
+        headers.put("accept", "application/json");
+        headers.put("User-Agent", "Test-Agent");
+        request.setHeaders(headers);
+
+        HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", request, HttpResponseBean.class);
+
+        // 验证完整的响应对象结构
+        assertThat(response).isNotNull();
+        
+        // 验证状态码和状态文本
+        assertThat(response.getStatusCode()).isEqualTo(200);
+        assertThat(response.getStatusText()).isEqualTo("OK");
+        
+        // 验证响应体
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).isNotEmpty();
+        
+        // 验证响应头
+        assertThat(response.getHeaders()).isNotNull();
+        
+        // 验证Content-Type
+        assertThat(response.getContentType()).isNotNull();
     }
 }
