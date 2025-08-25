@@ -62,6 +62,15 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
+        
+        <!-- Spring AI for MCP Tools - 需要配置Spring仓库才能使用 -->
+        <!-- 
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-spring-boot-starter</artifactId>
+            <version>1.0.0-M4</version>
+        </dependency>
+        -->
     </dependencies>
 
     <build>
