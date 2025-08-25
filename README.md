@@ -14,7 +14,8 @@
 
 # 初始化项目TODO
  - [x] 初始化camel的demo, 以一个java bean为输入, 将其转发到对应的地址上, 并将响应返回给上游
- - [ ] 添加一个mcp tools的demo, 将其转发到http server上, 并将结果返回给上游
- - [ ] 从yaml中读取配置, 来启动一个mcp server
- - [ ] 从yaml中读取配置, 完成camel路由的配置
+ - [x] 添加一个mcp tools的demo, 将其转发到http server上, 并将结果返回给上游
+ - [ ] 从openapi3.1文件中读取配置, 来启动一个mcp server
+ - [ ] 从openapi3.1文件中读取配置, 完成camel路由的配置
  - [ ] 编写一段示例, 描述如何使用这个项目
+ - [ ] 实现实例中的逻辑

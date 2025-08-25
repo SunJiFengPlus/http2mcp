@@ -6,7 +6,9 @@ import org.springframework.stereotype.Component;
 import org.apache.camel.examples.model.HttpRequestBean;
 import org.apache.camel.examples.model.HttpResponseBean;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,7 +39,9 @@ public class HttpRequestRoute extends RouteBuilder {
 
         exchange.getIn().setHeader(Exchange.HTTP_METHOD, request.getMethod());
         exchange.getIn().setHeader("HTTP_ENDPOINT", request.buildFullUrl());
-        request.getHeaders().forEach((k, v) -> exchange.getIn().setHeader(k, v));
+        Optional.ofNullable(request.getHeaders())
+            .orElse(new HashMap<>())
+            .forEach((k, v) -> exchange.getIn().setHeader(k, v));
 
         String body = request.getBody();
         exchange.getIn().setBody(body != null && !body.trim().isEmpty() ? body : "");
