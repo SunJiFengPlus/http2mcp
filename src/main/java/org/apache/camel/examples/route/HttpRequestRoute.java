@@ -3,8 +3,8 @@ package org.apache.camel.examples.route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
-import org.apache.camel.examples.model.HttpRequestBean;
-import org.apache.camel.examples.model.HttpResponseBean;
+import org.apache.camel.examples.domain.HttpRequestBean;
+import org.apache.camel.examples.domain.HttpResponseBean;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,19 +48,14 @@ public class HttpRequestRoute extends RouteBuilder {
     }
     
     private void processHttpResponse(Exchange exchange) {
-        // 获取响应信息
         Integer statusCode = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
         String responseBody = exchange.getIn().getBody(String.class);
-        
-        // 获取响应头
         Map<String, Object> responseHeaders = exchange.getIn().getHeaders()
             .entrySet().stream()
             .filter(entry -> isHttpResponseHeader(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        // 创建响应对象
         HttpResponseBean response = new HttpResponseBean(statusCode, responseHeaders, responseBody);
-
         exchange.getIn().setBody(response);
     }
     

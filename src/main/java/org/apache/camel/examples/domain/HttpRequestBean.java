@@ -1,7 +1,8 @@
-package org.apache.camel.examples.model;
+package org.apache.camel.examples.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Map;
 import java.util.Objects;
@@ -10,6 +11,7 @@ import java.util.HashMap;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class HttpRequestBean {
     private String method;
     private String url;

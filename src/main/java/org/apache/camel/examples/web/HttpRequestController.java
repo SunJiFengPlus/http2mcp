@@ -1,8 +1,8 @@
 package org.apache.camel.examples.web;
 
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.examples.model.HttpRequestBean;
-import org.apache.camel.examples.model.HttpResponseBean;
+import org.apache.camel.examples.domain.HttpRequestBean;
+import org.apache.camel.examples.domain.HttpResponseBean;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +22,6 @@ public class HttpRequestController {
     @PostMapping("/http/request")
     public ResponseEntity<HttpResponseBean> sendHttpRequest(@RequestBody HttpRequestBean requestBean) {
         HttpResponseBean response = producerTemplate.requestBody("direct:httpRequest", requestBean, HttpResponseBean.class);
-        
-        // 根据HTTP响应状态码设置Spring响应状态
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     

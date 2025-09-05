@@ -1,4 +1,4 @@
-package org.apache.camel.examples.model;
+package org.apache.camel.examples.domain;
 
 import lombok.Data;
 import lombok.AllArgsConstructor;

@@ -1,8 +1,8 @@
 package org.apache.camel.examples.route;
 
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.examples.model.HttpRequestBean;
-import org.apache.camel.examples.model.HttpResponseBean;
+import org.apache.camel.examples.domain.HttpRequestBean;
+import org.apache.camel.examples.domain.HttpResponseBean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
