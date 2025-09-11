@@ -8,3 +8,15 @@ spring:
 camel:
   springboot:
     main-run-controller: true
+
+# OpenAPI MCP配置
+openapi:
+  config:
+    enabled: true
+    # OpenAPI配置文件路径，支持classpath:和file:前缀
+    # 示例: classpath:openapi/petstore.yaml 或 file:/path/to/api.yaml
+    file: ${OPENAPI_CONFIG_FILE:}
+
+logging:
+  level:
+    org.apache.camel.examples: DEBUG

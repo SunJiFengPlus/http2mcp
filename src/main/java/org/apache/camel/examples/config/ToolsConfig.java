@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 /**
  * 工具配置类，负责从Spring容器中获取所有工具类并注册为ToolCallbackProvider
+ * 当没有OpenAPI配置时作为备用方案
  */
 @Slf4j
 @Component
@@ -26,14 +28,17 @@ public class ToolsConfig {
     private ApplicationContext applicationContext;
 
     @Bean
+    @ConditionalOnMissingBean(name = "openApiToolCallbackProvider")
     public ToolCallbackProvider toolCallbackProvider() {
+        log.info("使用默认工具配置（未检测到OpenAPI配置）");
+        
         List<Object> toolObjects = new ArrayList<>();
         
         // 获取所有可能包含工具方法的Bean
         collectTools(toolObjects);
         
         // 打印注册的工具信息
-        log.info("已注册 {} 个工具类:", toolObjects.size());
+        log.info("已注册 {} 个默认工具类:", toolObjects.size());
         for (Object tool : toolObjects) {
             log.info("- {}", tool.getClass().getSimpleName());
         }

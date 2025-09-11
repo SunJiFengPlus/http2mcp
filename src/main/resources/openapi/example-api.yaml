@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: 示例HTTP API
+  version: 1.0.0
+  description: |
+    这是一个示例API配置，演示如何使用OpenAPI 3.1配置来生成MCP工具。
+    该API使用httpbin.org作为测试服务器。
+
+servers:
+  - url: https://httpbin.org
+    description: httpbin.org测试服务器
+
+paths:
+  /get:
+    get:
+      operationId: testGet
+      summary: 测试GET请求
+      description: 向httpbin发送GET请求，可以测试查询参数和响应
+      parameters:
+        - name: param1
+          in: query
+          description: 查询参数1
+          required: false
+          schema:
+            type: string
+            example: "test_value"
+        - name: param2
+          in: query
+          description: 查询参数2
+          required: false
+          schema:
+            type: integer
+            example: 42
+      responses:
+        '200':
+          description: 成功响应，返回请求信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  args:
+                    type: object
+                    description: 查询参数
+                  headers:
+                    type: object
+                    description: 请求头
+                  origin:
+                    type: string
+                    description: 客户端IP
+                  url:
+                    type: string
+                    description: 请求URL
+
+  /post:
+    post:
+      operationId: testPost
+      summary: 测试POST请求
+      description: 向httpbin发送POST请求，可以测试JSON数据提交
+      requestBody:
+        required: true
+        description: POST请求体数据
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: 消息内容
+                  example: "Hello, World!"
+                number:
+                  type: integer
+                  description: 数字值
+                  example: 123
+              required:
+                - message
+      responses:
+        '200':
+          description: 成功响应，返回提交的数据和请求信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    description: 提交的数据
+                  json:
+                    type: object
+                    description: 解析后的JSON数据
+                  headers:
+                    type: object
+                    description: 请求头
+                  origin:
+                    type: string
+                    description: 客户端IP
+
+  /status/{code}:
+    get:
+      operationId: testHttpStatus
+      summary: 测试HTTP状态码
+      description: 返回指定的HTTP状态码，用于测试错误处理
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: HTTP状态码
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 599
+            example: 200
+      responses:
+        '200':
+          description: 成功响应
+        '400':
+          description: 客户端错误
+        '500':
+          description: 服务器错误
+
+  /delay/{seconds}:
+    get:
+      operationId: testDelay
+      summary: 测试延迟响应
+      description: 延迟指定秒数后返回响应，用于测试超时处理
+      parameters:
+        - name: seconds
+          in: path
+          required: true
+          description: 延迟秒数（最大10秒）
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            example: 2
+      responses:
+        '200':
+          description: 延迟后的成功响应
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  args:
+                    type: object
+                  headers:
+                    type: object
+                  origin:
+                    type: string
+                  url:
+                    type: string
+
+  /headers:
+    get:
+      operationId: testHeaders
+      summary: 测试请求头
+      description: 返回所有接收到的请求头信息
+      parameters:
+        - name: User-Agent
+          in: header
+          description: 用户代理字符串
+          required: false
+          schema:
+            type: string
+            example: "HTTP2MCP/1.0"
+        - name: X-Custom-Header
+          in: header
+          description: 自定义头信息
+          required: false
+          schema:
+            type: string
+            example: "custom-value"
+      responses:
+        '200':
+          description: 返回请求头信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  headers:
+                    type: object
+                    description: 所有接收到的请求头
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 错误信息
+        code:
+          type: integer
+          description: 错误代码
+      required:
+        - error
+        - code
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: 操作是否成功
+        data:
+          type: object
+          description: 响应数据
+      required:
+        - success
