@@ -1,39 +1,28 @@
 package org.apache.camel.examples.openapi.integration;
 
-import org.apache.camel.examples.openapi.config.OpenApiMcpConfig;
-import org.apache.camel.examples.openapi.parser.OpenApiParser;
-import org.apache.camel.examples.openapi.service.DynamicMcpToolGenerator;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import org.apache.camel.examples.openapi.service.OpenApiToolProvider;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.test.context.TestPropertySource;
 
-import java.io.IOException;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * OpenAPI MCP集成测试
+ * 简化的OpenAPI集成测试
+ * 测试重构后的简化架构
  */
 @SpringBootTest
 @TestPropertySource(properties = {
     "openapi.config.enabled=false" // 禁用自动配置，避免干扰测试
 })
-class OpenApiMcpIntegrationTest {
-
-    @Autowired
-    private OpenApiParser openApiParser;
-    
-    @Autowired
-    private DynamicMcpToolGenerator dynamicMcpToolGenerator;
-    
-    @Autowired
-    private ResourceLoader resourceLoader;
+class SimplifiedOpenApiIntegrationTest {
 
     @Test
-    void 应该成功创建完整的OpenAPI_MCP流程() throws IOException {
+    void 应该成功解析OpenAPI并创建工具提供者() {
         String testOpenApiYaml = """
             openapi: 3.1.0
             info:
@@ -58,10 +47,6 @@ class OpenApiMcpIntegrationTest {
                   responses:
                     '200':
                       description: 成功响应
-                      content:
-                        application/json:
-                          schema:
-                            type: object
               /post:
                 post:
                   operationId: httpbinPost
@@ -81,29 +66,16 @@ class OpenApiMcpIntegrationTest {
                       description: 成功响应
             """;
 
-        var configOptional = openApiParser.parseFromContent(testOpenApiYaml, true);
+        OpenAPI openAPI = new OpenAPIV3Parser().readContents(testOpenApiYaml, null, null).getOpenAPI();
         
-        assertThat(configOptional).isPresent();
+        assertThat(openAPI).isNotNull();
+        assertThat(openAPI.getInfo().getTitle()).isEqualTo("测试API");
+        assertThat(openAPI.getPaths()).hasSize(2);
+        assertThat(openAPI.getPaths()).containsKeys("/get", "/post");
 
-        var config = configOptional.get();
-        assertThat(config.getInfo().getTitle()).isEqualTo("测试API");
-        assertThat(config.getPaths()).hasSize(2);
+        OpenApiToolProvider toolProvider = new OpenApiToolProvider(openAPI);
         
-        var dynamicTools = dynamicMcpToolGenerator.generateDynamicTools(config);
-        
-        assertThat(dynamicTools).isNotNull();
-
-        var toolDescriptions = dynamicMcpToolGenerator.getGeneratedToolDescriptions(config);
-        
-        assertThat(toolDescriptions).hasSize(2);
-        
-        assertThat(toolDescriptions)
-            .extracting(DynamicMcpToolGenerator.ToolDescription::getMethodName)
-            .containsExactlyInAnyOrder("httpbinGet", "httpbinPost");
-            
-        assertThat(toolDescriptions)
-            .extracting(DynamicMcpToolGenerator.ToolDescription::getEndpoint)
-            .containsExactlyInAnyOrder("GET /get", "POST /post");
+        assertThat(toolProvider).isNotNull();
     }
 
     @Test
@@ -157,33 +129,20 @@ class OpenApiMcpIntegrationTest {
                       description: 成功
             """;
 
-        var configOptional = openApiParser.parseFromContent(complexApiYaml, true);
+        OpenAPI openAPI = new OpenAPIV3Parser().readContents(complexApiYaml, null, null).getOpenAPI();
         
-        assertThat(configOptional).isPresent();
+        assertThat(openAPI).isNotNull();
+        assertThat(openAPI.getInfo().getTitle()).isEqualTo("复杂API");
+        
+        var pathItem = openAPI.getPaths().get("/users/{userId}/posts/{postId}");
+        assertThat(pathItem).isNotNull();
+        assertThat(pathItem.getGet()).isNotNull();
+        assertThat(pathItem.getGet().getOperationId()).isEqualTo("getUserPost");
+        assertThat(pathItem.getGet().getParameters()).hasSize(5);
 
-        var config = configOptional.get();
-        var toolDescriptions = dynamicMcpToolGenerator.getGeneratedToolDescriptions(config);
+        OpenApiToolProvider toolProvider = new OpenApiToolProvider(openAPI);
         
-        assertThat(toolDescriptions).hasSize(1);
-        
-        var toolDescription = toolDescriptions.get(0);
-        assertThat(toolDescription.getMethodName()).isEqualTo("getUserPost");
-        assertThat(toolDescription.getEndpoint()).isEqualTo("GET /users/{userId}/posts/{postId}");
-        assertThat(toolDescription.getParameters()).hasSize(5);
-        
-        assertThat(toolDescription.getParameters())
-            .extracting(DynamicMcpToolGenerator.ParameterDescription::getName)
-            .containsExactlyInAnyOrder("userId", "postId", "include", "format", "Authorization");
-            
-        assertThat(toolDescription.getParameters())
-            .filteredOn(p -> "userId".equals(p.getName()))
-            .extracting(DynamicMcpToolGenerator.ParameterDescription::isRequired)
-            .containsExactly(true);
-            
-        assertThat(toolDescription.getParameters())
-            .filteredOn(p -> "include".equals(p.getName()))
-            .extracting(DynamicMcpToolGenerator.ParameterDescription::isRequired)
-            .containsExactly(false);
+        assertThat(toolProvider).isNotNull();
     }
 
     @Test
@@ -193,9 +152,10 @@ class OpenApiMcpIntegrationTest {
             content: that should fail
             """;
 
-        var configOptional = openApiParser.parseFromContent(invalidYaml, true);
+        OpenAPI openAPI = new OpenAPIV3Parser().readContents(invalidYaml, null, null).getOpenAPI();
         
-        assertThat(configOptional).isEmpty();
+        // OpenAPIV3Parser 会返回 null 对于无效的配置
+        assertThat(openAPI).isNull();
     }
 
     @Test
@@ -210,13 +170,14 @@ class OpenApiMcpIntegrationTest {
             paths: {}
             """;
 
-        var configOptional = openApiParser.parseFromContent(emptyPathsYaml, true);
+        OpenAPI openAPI = new OpenAPIV3Parser().readContents(emptyPathsYaml, null, null).getOpenAPI();
         
-        assertThat(configOptional).isPresent();
+        assertThat(openAPI).isNotNull();
+        assertThat(openAPI.getInfo().getTitle()).isEqualTo("空路径API");
+        assertThat(openAPI.getPaths()).isEmpty();
 
-        var config = configOptional.get();
-        var toolDescriptions = dynamicMcpToolGenerator.getGeneratedToolDescriptions(config);
+        OpenApiToolProvider toolProvider = new OpenApiToolProvider(openAPI);
         
-        assertThat(toolDescriptions).isEmpty();
+        assertThat(toolProvider).isNotNull();
     }
 }

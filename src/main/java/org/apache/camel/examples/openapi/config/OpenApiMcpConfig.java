@@ -2,32 +2,33 @@ package org.apache.camel.examples.openapi.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.camel.examples.openapi.model.OpenApiConfig;
-import org.apache.camel.examples.openapi.parser.OpenApiParser;
-import org.apache.camel.examples.openapi.service.DynamicMcpToolGenerator;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.examples.openapi.service.OpenApiToolProvider;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * OpenAPI MCP配置类
- * 负责从OpenAPI文件生成和注册MCP工具
+ * 负责合并传统工具和基于OpenAPI生成的MCP工具
  */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class OpenApiMcpConfig {
     
-    private final OpenApiParser openApiParser;
-    private final DynamicMcpToolGenerator dynamicMcpToolGenerator;
     private final ResourceLoader resourceLoader;
     
     @Value("${openapi.config.file:}")
@@ -37,70 +38,72 @@ public class OpenApiMcpConfig {
     private boolean openApiConfigEnabled;
     
     /**
-     * 创建基于OpenAPI的工具回调提供者
+     * 创建合并的工具回调提供者（传统工具 + OpenAPI工具）
      */
     @Bean
-    @Primary
-    public ToolCallbackProvider openApiToolCallbackProvider() {
-        log.info("正在初始化OpenAPI MCP工具提供者...");
+    public ToolCallbackProvider mergedToolCallbackProvider(
+            @Qualifier("traditionalToolObjects") List<Object> traditionalTools,
+            ApplicationContext applicationContext) {
         
-        if (!openApiConfigEnabled) {
-            log.info("OpenAPI配置已禁用");
-            return createEmptyToolCallbackProvider();
-        }
+        log.info("正在初始化合并的MCP工具提供者...");
         
-        if (openApiConfigFile == null || openApiConfigFile.trim().isEmpty()) {
-            log.info("未指定OpenAPI配置文件，使用空的工具提供者");
-            return createEmptyToolCallbackProvider();
-        }
+        List<Object> allTools = new ArrayList<>();
         
-        try {
-            log.info("正在加载OpenAPI配置文件: {}", openApiConfigFile);
+        // 添加传统工具
+        allTools.addAll(traditionalTools);
+        log.info("已包含 {} 个传统@Tool工具", traditionalTools.size());
+        
+        // 添加OpenAPI工具
+        if (openApiConfigEnabled && openApiConfigFile != null && !openApiConfigFile.trim().isEmpty()) {
+            Optional<OpenAPI> openApiOptional = loadOpenApiSpec(openApiConfigFile);
             
-            // 加载OpenAPI配置
-            Optional<OpenApiConfig> configOptional = loadOpenApiConfig(openApiConfigFile);
-            
-            if (configOptional.isEmpty()) {
-                log.warn("无法加载OpenAPI配置文件: {}", openApiConfigFile);
-                return createEmptyToolCallbackProvider();
-            }
-            
-            OpenApiConfig openApiConfig = configOptional.get();
-            log.info("成功加载OpenAPI配置: {} v{}", 
-                Optional.ofNullable(openApiConfig.getInfo())
-                    .map(info -> info.getTitle())
-                    .orElse("Unknown API"),
-                Optional.ofNullable(openApiConfig.getInfo())
-                    .map(info -> info.getVersion())
-                    .orElse("Unknown")
-            );
-            
-            // 生成动态工具
-            Object dynamicTools = dynamicMcpToolGenerator.generateDynamicTools(openApiConfig);
-            
-            // 获取工具描述（用于日志）
-            List<DynamicMcpToolGenerator.ToolDescription> toolDescriptions = 
-                dynamicMcpToolGenerator.getGeneratedToolDescriptions(openApiConfig);
-            
-            log.info("成功生成 {} 个动态MCP工具:", toolDescriptions.size());
-            toolDescriptions.forEach(tool -> 
-                log.info("- {} ({}): {}", tool.getMethodName(), tool.getEndpoint(), tool.getDescription())
-            );
-            
-            return MethodToolCallbackProvider.builder()
-                .toolObjects(dynamicTools)
-                .build();
+            if (openApiOptional.isPresent()) {
+                OpenAPI openApi = openApiOptional.get();
+                log.info("成功加载OpenAPI配置: {} v{}", 
+                    openApi.getInfo() != null ? openApi.getInfo().getTitle() : "Unknown API",
+                    openApi.getInfo() != null ? openApi.getInfo().getVersion() : "Unknown"
+                );
                 
-        } catch (Exception e) {
-            log.error("初始化OpenAPI MCP工具提供者失败", e);
-            return createEmptyToolCallbackProvider();
+                // 创建OpenApiToolProvider并注入ProducerTemplate
+                OpenApiToolProvider toolProvider = new OpenApiToolProvider(openApi);
+                applicationContext.getAutowireCapableBeanFactory().autowireBean(toolProvider);
+                allTools.add(toolProvider);
+                
+                int operationCount = openApi.getPaths() != null ? 
+                    openApi.getPaths().values().stream()
+                        .mapToInt(this::countOperations)
+                        .sum() : 0;
+                log.info("成功生成OpenAPI工具提供者，包含 {} 个操作", operationCount);
+                
+            } else {
+                log.warn("无法加载OpenAPI配置文件: {}", openApiConfigFile);
+            }
+        } else {
+            log.info("OpenAPI配置未启用或未指定文件");
         }
+        
+        // 创建合并的工具提供者，包含所有工具
+        log.info("创建包含传统工具和OpenAPI工具的合并提供者");
+        
+        return MethodToolCallbackProvider.builder()
+            .toolObjects(allTools.toArray())
+            .build();
+    }
+    
+    private int countOperations(io.swagger.v3.oas.models.PathItem pathItem) {
+        int count = 0;
+        if (pathItem.getGet() != null) count++;
+        if (pathItem.getPost() != null) count++;
+        if (pathItem.getPut() != null) count++;
+        if (pathItem.getDelete() != null) count++;
+        if (pathItem.getPatch() != null) count++;
+        return count;
     }
     
     /**
-     * 加载OpenAPI配置
+     * 加载OpenAPI规范
      */
-    private Optional<OpenApiConfig> loadOpenApiConfig(String configFile) {
+    private Optional<OpenAPI> loadOpenApiSpec(String configFile) {
         try {
             Resource resource = resourceLoader.getResource(configFile);
             
@@ -110,61 +113,19 @@ public class OpenApiMcpConfig {
             }
             
             String content = new String(resource.getInputStream().readAllBytes());
-            boolean isYaml = configFile.toLowerCase().endsWith(".yaml") || 
-                           configFile.toLowerCase().endsWith(".yml");
             
-            return openApiParser.parseFromContent(content, isYaml);
+            OpenAPI openAPI = new OpenAPIV3Parser().readContents(content, null, null).getOpenAPI();
+            
+            if (openAPI == null) {
+                log.warn("无法解析OpenAPI内容");
+                return Optional.empty();
+            }
+            
+            return Optional.of(openAPI);
             
         } catch (Exception e) {
             log.error("加载OpenAPI配置文件失败: {}", configFile, e);
             return Optional.empty();
-        }
-    }
-    
-    /**
-     * 创建空的工具回调提供者
-     */
-    private ToolCallbackProvider createEmptyToolCallbackProvider() {
-        return MethodToolCallbackProvider.builder()
-            .toolObjects(new DynamicMcpToolGenerator.EmptyToolsProxy())
-            .build();
-    }
-    
-    /**
-     * 提供OpenAPI配置信息的Bean（可选，用于调试）
-     */
-    @Bean
-    public OpenApiConfigInfo openApiConfigInfo() {
-        return new OpenApiConfigInfo(
-            openApiConfigFile,
-            openApiConfigEnabled,
-            loadOpenApiConfig(openApiConfigFile).isPresent()
-        );
-    }
-    
-    /**
-     * OpenAPI配置信息
-     */
-    public static class OpenApiConfigInfo {
-        private final String configFile;
-        private final boolean enabled;
-        private final boolean loaded;
-        
-        public OpenApiConfigInfo(String configFile, boolean enabled, boolean loaded) {
-            this.configFile = configFile;
-            this.enabled = enabled;
-            this.loaded = loaded;
-        }
-        
-        // Getters
-        public String getConfigFile() { return configFile; }
-        public boolean isEnabled() { return enabled; }
-        public boolean isLoaded() { return loaded; }
-        
-        @Override
-        public String toString() {
-            return String.format("OpenApiConfigInfo{file='%s', enabled=%s, loaded=%s}",
-                configFile, enabled, loaded);
         }
     }
 }

@@ -18,8 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 工具配置类，负责从Spring容器中获取所有工具类并注册为ToolCallbackProvider
- * 当没有OpenAPI配置时作为备用方案
+ * 传统工具配置类，负责从Spring容器中获取所有@Tool注解的工具类
  */
 @Slf4j
 @Component
@@ -28,24 +27,19 @@ public class ToolsConfig {
     private ApplicationContext applicationContext;
 
     @Bean
-    @ConditionalOnMissingBean(name = "openApiToolCallbackProvider")
-    public ToolCallbackProvider toolCallbackProvider() {
-        log.info("使用默认工具配置（未检测到OpenAPI配置）");
-        
+    public List<Object> traditionalToolObjects() {
         List<Object> toolObjects = new ArrayList<>();
         
         // 获取所有可能包含工具方法的Bean
         collectTools(toolObjects);
         
         // 打印注册的工具信息
-        log.info("已注册 {} 个默认工具类:", toolObjects.size());
+        log.info("收集到 {} 个传统@Tool工具类:", toolObjects.size());
         for (Object tool : toolObjects) {
             log.info("- {}", tool.getClass().getSimpleName());
         }
         
-        return MethodToolCallbackProvider.builder()
-            .toolObjects(toolObjects.toArray())
-            .build();
+        return toolObjects;
     }
     
     private <A extends Annotation> void collectTools(List<Object> toolObjects) {
