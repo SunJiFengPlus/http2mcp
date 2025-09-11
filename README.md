@@ -1,27 +1,108 @@
-# 项目愿景
-希望能够将普通http接口转换为mcp协议的streamble http接口或者sse接口, 在转换的过程中我可以通过yaml配置或者简单编码来自定义转换逻辑(比如裁剪一些信息, 拼接一些信息, 映射). 
-因为传统http接口的响应对于模型来说有事并不可读, 我希望能够快速的处理完成这件事情, 并且后续迭代也十分简单.
-希望这个项目能够作为企业级落地MCP的开发框架.
+# OpenAPI YAML读取器
 
-# 企业级场景
-1. HTTP接口可能需要一些复杂的参数, 模型无法处理或者无法准确处理;
-2. HTTP接口需要认证鉴权, 模型无法直接处理, 注定要有一个中间层处理这部分逻辑;
-3. HTTP接口响应伴随历史技术债, 响应信息词不达意, 影响模型判断;
-4. HTTP接口响应冗余, 占用过多模型上下文;
-5. 多个HTTP接口请求与响应不统一, 模型在逻辑上无法串联调用;
-6. HTTP响应信息中包含企业私域知识, 模型无法理解;
+这是一个简单的Spring Boot应用，提供从resources目录中读取OpenAPI 3.1 YAML文件的功能。
 
-现有的HTTP转MCP Server只能在协议上进行转换, 无法进行更多细节的处理;
-归根结底就是如果仅有协议转换是不行的! 除此之外还需要一个重要的操作: Map! Map! Map!
-每个企业的映射逻辑不可能完全覆盖, 所以希望这个项目能够预制一些通用的逻辑, 以及自定义逻辑下的AI提示词, 帮助快速搭建一个企业级MCP Server.
+## 功能特性
 
-# 初始化项目TODO
- - [x] 初始化camel的demo, 以一个java bean为输入, 将其转发到对应的地址上, 并将响应返回给上游
- - [x] 添加一个mcp tools的demo, 将其转发到http server上, 并将结果返回给上游
- - [ ] 从openapi3.1文件中读取配置, 来启动一个mcp server
- - [ ] 从openapi3.1文件中读取配置, 完成camel路由的配置
- - [ ] 预制一些常用的处理逻辑
- - [ ] 实现一个map struct的处理作为示例
- - [ ] 实现一个json path的处理作为示例
- - [ ] 实现一个认证鉴权的处理作为示例
- - [ ] 实现一个SpringBoot Starter
+- 从classpath读取OpenAPI 3.1 YAML规范文件
+- 使用swagger-parser解析OpenAPI内容
+- 提供REST API查看OpenAPI规范信息
+- 支持自定义OpenAPI文件路径
+
+## API接口
+
+### 获取OpenAPI基本信息
+
+**GET** `/api/openapi/info`
+
+可选参数：
+- `file`: OpenAPI文件路径（默认为配置文件中的路径）
+
+响应示例：
+```json
+{
+  "filePath": "classpath:openapi/example-api.yaml",
+  "success": true,
+  "title": "示例HTTP API",
+  "version": "1.0.0",
+  "description": "这是一个示例API配置...",
+  "pathCount": 5,
+  "paths": ["/get", "/post", "/status/{code}", "/delay/{seconds}", "/headers"],
+  "servers": [
+    {
+      "url": "https://httpbin.org",
+      "description": "httpbin.org测试服务器"
+    }
+  ]
+}
+```
+
+### 获取完整OpenAPI规范
+
+**GET** `/api/openapi/spec`
+
+可选参数：
+- `file`: OpenAPI文件路径（默认为配置文件中的路径）
+
+返回完整的OpenAPI规范对象。
+
+## 配置
+
+在 `application.yml` 中配置默认的OpenAPI文件路径：
+
+```yaml
+openapi:
+  file: classpath:openapi/example-api.yaml
+```
+
+## 使用示例
+
+### 编程方式使用
+
+```java
+@Autowired
+private OpenApiYamlReader openApiYamlReader;
+
+public void readOpenApiSpec() {
+    Optional<OpenAPI> openAPI = openApiYamlReader.readOpenApiFromResource("classpath:openapi/my-api.yaml");
+    
+    if (openAPI.isPresent()) {
+        OpenAPI api = openAPI.get();
+        System.out.println("API标题: " + api.getInfo().getTitle());
+        System.out.println("API版本: " + api.getInfo().getVersion());
+        // 处理OpenAPI对象...
+    }
+}
+```
+
+## 运行应用
+
+1. 启动应用：
+```bash
+./mvnw spring-boot:run
+```
+
+2. 应用将在端口8888上启动
+
+3. 查看OpenAPI信息：
+```bash
+curl http://localhost:8888/api/openapi/info
+```
+
+4. 获取完整规范：
+```bash
+curl http://localhost:8888/api/openapi/spec
+```
+
+## OpenAPI文件位置
+
+默认的示例OpenAPI文件位于：`src/main/resources/openapi/example-api.yaml`
+
+你可以添加自己的OpenAPI文件到resources目录，并通过API参数或配置文件指定路径。
+
+## 技术栈
+
+- Java 17
+- Spring Boot 3.4.5
+- Swagger Parser 2.1.22
+- Maven

@@ -3,20 +3,13 @@ server:
 
 spring:
   application:
-    name: camel-mcp-demo
+    name: openapi-yaml-reader
 
-camel:
-  springboot:
-    main-run-controller: true
-
-# OpenAPI MCP配置
+# OpenAPI配置
 openapi:
-  config:
-    enabled: true
-    # OpenAPI配置文件路径，支持classpath:和file:前缀
-    # 示例: classpath:openapi/petstore.yaml 或 file:/path/to/api.yaml
-    file: ${OPENAPI_CONFIG_FILE:}
+  # 默认的OpenAPI文件路径
+  file: classpath:openapi/example-api.yaml
 
 logging:
   level:
-    org.apache.camel.examples: DEBUG
+    org.apache.camel.examples: INFO
