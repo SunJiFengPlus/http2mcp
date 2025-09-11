@@ -2,18 +2,19 @@ package org.apache.camel.examples.openapi.integration;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
-import org.apache.camel.examples.openapi.service.OpenApiToolProvider;
+import org.apache.camel.examples.openapi.service.OpenApiIndividualToolGenerator;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
-import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
 /**
  * 简化的OpenAPI集成测试
- * 测试重构后的简化架构
+ * 测试每个API接口都成为独立工具的架构
  */
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -21,8 +22,11 @@ import static org.assertj.core.api.Assertions.*;
 })
 class SimplifiedOpenApiIntegrationTest {
 
+    @Autowired
+    private OpenApiIndividualToolGenerator openApiIndividualToolGenerator;
+
     @Test
-    void 应该成功解析OpenAPI并创建工具提供者() {
+    void 应该为每个OpenAPI操作创建独立的工具对象() {
         String testOpenApiYaml = """
             openapi: 3.1.0
             info:
@@ -71,15 +75,23 @@ class SimplifiedOpenApiIntegrationTest {
         assertThat(openAPI).isNotNull();
         assertThat(openAPI.getInfo().getTitle()).isEqualTo("测试API");
         assertThat(openAPI.getPaths()).hasSize(2);
-        assertThat(openAPI.getPaths()).containsKeys("/get", "/post");
-
-        OpenApiToolProvider toolProvider = new OpenApiToolProvider(openAPI);
         
-        assertThat(toolProvider).isNotNull();
+        List<Object> tools = openApiIndividualToolGenerator.createIndividualTools(openAPI);
+        
+        assertThat(tools).hasSize(2);
+        
+        var tool1 = (OpenApiIndividualToolGenerator.IndividualApiTool) tools.get(0);
+        var tool2 = (OpenApiIndividualToolGenerator.IndividualApiTool) tools.get(1);
+        
+        assertThat(tool1.getToolName()).isEqualTo("httpbinGet");
+        assertThat(tool2.getToolName()).isEqualTo("httpbinPost");
+        
+        assertThat(tool1.getDescription()).isEqualTo("向httpbin发送GET请求进行测试");
+        assertThat(tool2.getDescription()).isEqualTo("向httpbin发送POST请求进行测试");
     }
 
     @Test
-    void 应该处理复杂的参数配置() {
+    void 应该为复杂API创建多个独立工具() {
         String complexApiYaml = """
             openapi: 3.1.0
             info:
@@ -105,28 +117,16 @@ class SimplifiedOpenApiIntegrationTest {
                       description: 帖子ID
                       schema:
                         type: integer
-                    - name: include
-                      in: query
-                      description: 包含的额外信息
-                      schema:
-                        type: array
-                        items:
-                          type: string
-                    - name: format
-                      in: query
-                      description: 响应格式
-                      schema:
-                        type: string
-                        enum: [json, xml, yaml]
-                        default: json
-                    - name: Authorization
-                      in: header
-                      description: 认证令牌
-                      schema:
-                        type: string
                   responses:
                     '200':
                       description: 成功
+              /users:
+                get:
+                  operationId: getUsers
+                  summary: 获取所有用户
+                post:
+                  operationId: createUser  
+                  summary: 创建用户
             """;
 
         OpenAPI openAPI = new OpenAPIV3Parser().readContents(complexApiYaml, null, null).getOpenAPI();
@@ -134,15 +134,21 @@ class SimplifiedOpenApiIntegrationTest {
         assertThat(openAPI).isNotNull();
         assertThat(openAPI.getInfo().getTitle()).isEqualTo("复杂API");
         
-        var pathItem = openAPI.getPaths().get("/users/{userId}/posts/{postId}");
-        assertThat(pathItem).isNotNull();
-        assertThat(pathItem.getGet()).isNotNull();
-        assertThat(pathItem.getGet().getOperationId()).isEqualTo("getUserPost");
-        assertThat(pathItem.getGet().getParameters()).hasSize(5);
-
-        OpenApiToolProvider toolProvider = new OpenApiToolProvider(openAPI);
+        List<Object> tools = openApiIndividualToolGenerator.createIndividualTools(openAPI);
         
-        assertThat(toolProvider).isNotNull();
+        assertThat(tools).hasSize(3);
+        
+        assertThat(tools)
+            .extracting(tool -> ((OpenApiIndividualToolGenerator.IndividualApiTool) tool).getToolName())
+            .containsExactlyInAnyOrder("getUserPost", "getUsers", "createUser");
+            
+        assertThat(tools)
+            .extracting(tool -> ((OpenApiIndividualToolGenerator.IndividualApiTool) tool).getDescription())
+            .containsExactlyInAnyOrder(
+                "获取用户的特定帖子", 
+                "获取所有用户", 
+                "创建用户"
+            );
     }
 
     @Test
@@ -176,8 +182,8 @@ class SimplifiedOpenApiIntegrationTest {
         assertThat(openAPI.getInfo().getTitle()).isEqualTo("空路径API");
         assertThat(openAPI.getPaths()).isEmpty();
 
-        OpenApiToolProvider toolProvider = new OpenApiToolProvider(openAPI);
+        List<Object> tools = openApiIndividualToolGenerator.createIndividualTools(openAPI);
         
-        assertThat(toolProvider).isNotNull();
+        assertThat(tools).isEmpty();
     }
 }

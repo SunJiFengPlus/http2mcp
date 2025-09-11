@@ -4,13 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.examples.openapi.service.OpenApiToolProvider;
+import org.apache.camel.examples.openapi.service.OpenApiIndividualToolGenerator;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
@@ -22,7 +20,7 @@ import java.util.Optional;
 
 /**
  * OpenAPI MCP配置类
- * 负责合并传统工具和基于OpenAPI生成的MCP工具
+ * 负责合并传统工具和基于OpenAPI生成的独立MCP工具
  */
 @Slf4j
 @Configuration
@@ -30,6 +28,7 @@ import java.util.Optional;
 public class OpenApiMcpConfig {
     
     private final ResourceLoader resourceLoader;
+    private final OpenApiIndividualToolGenerator openApiIndividualToolGenerator;
     
     @Value("${openapi.config.file:}")
     private String openApiConfigFile;
@@ -38,12 +37,11 @@ public class OpenApiMcpConfig {
     private boolean openApiConfigEnabled;
     
     /**
-     * 创建合并的工具回调提供者（传统工具 + OpenAPI工具）
+     * 创建合并的工具回调提供者（传统工具 + 每个OpenAPI接口作为独立工具）
      */
     @Bean
     public ToolCallbackProvider mergedToolCallbackProvider(
-            @Qualifier("traditionalToolObjects") List<Object> traditionalTools,
-            ApplicationContext applicationContext) {
+            @Qualifier("traditionalToolObjects") List<Object> traditionalTools) {
         
         log.info("正在初始化合并的MCP工具提供者...");
         
@@ -64,16 +62,15 @@ public class OpenApiMcpConfig {
                     openApi.getInfo() != null ? openApi.getInfo().getVersion() : "Unknown"
                 );
                 
-                // 创建OpenApiToolProvider并注入ProducerTemplate
-                OpenApiToolProvider toolProvider = new OpenApiToolProvider(openApi);
-                applicationContext.getAutowireCapableBeanFactory().autowireBean(toolProvider);
-                allTools.add(toolProvider);
+                // 为每个API接口创建独立的工具对象
+                List<Object> openApiTools = openApiIndividualToolGenerator.createIndividualTools(openApi);
+                allTools.addAll(openApiTools);
                 
                 int operationCount = openApi.getPaths() != null ? 
                     openApi.getPaths().values().stream()
                         .mapToInt(this::countOperations)
                         .sum() : 0;
-                log.info("成功生成OpenAPI工具提供者，包含 {} 个操作", operationCount);
+                log.info("为 {} 个OpenAPI操作创建了独立的工具", operationCount);
                 
             } else {
                 log.warn("无法加载OpenAPI配置文件: {}", openApiConfigFile);
@@ -82,8 +79,8 @@ public class OpenApiMcpConfig {
             log.info("OpenAPI配置未启用或未指定文件");
         }
         
-        // 创建合并的工具提供者，包含所有工具
-        log.info("创建包含传统工具和OpenAPI工具的合并提供者");
+        // 创建包含所有工具的统一提供者
+        log.info("创建包含传统工具和OpenAPI独立工具的合并提供者，总计 {} 个工具", allTools.size());
         
         return MethodToolCallbackProvider.builder()
             .toolObjects(allTools.toArray())
