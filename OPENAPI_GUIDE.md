@@ -4,9 +4,8 @@
 
 ## 功能特性
 
-- 📖 **OpenAPI文档解析**: 支持从URL、文件或字符串内容解析OpenAPI 3.0规范
+- 📖 **OpenAPI文档解析**: 支持从文件或字符串内容解析OpenAPI 3.0规范
 - ✅ **文档验证**: 验证OpenAPI文档的有效性
-- 📊 **信息摘要**: 提供OpenAPI文档的基本信息摘要
 - 🔧 **Swagger原生模型**: 使用io.swagger.v3.oas.models.*下的原生模型，确保兼容性
 
 ## 核心服务
@@ -15,11 +14,9 @@
 
 这是核心解析服务，提供以下方法：
 
-- `parseFromUrl(String url)` - 从URL解析OpenAPI文档
 - `parseFromFile(String filePath)` - 从文件路径解析OpenAPI文档  
 - `parseFromString(String content)` - 从字符串内容解析OpenAPI文档
 - `isValidOpenAPI(OpenAPI openAPI)` - 验证OpenAPI文档是否有效
-- `getOpenAPIInfo(OpenAPI openAPI)` - 获取OpenAPI文档的基本信息摘要
 
 ## 使用示例
 
@@ -28,9 +25,6 @@
 ```java
 @Autowired
 private OpenApiParserService openApiParserService;
-
-// 从URL解析
-OpenAPI openAPI = openApiParserService.parseFromUrl("https://petstore3.swagger.io/api/v3/openapi.json");
 
 // 从文件解析
 OpenAPI openAPI = openApiParserService.parseFromFile("/path/to/openapi.yaml");
@@ -53,9 +47,10 @@ OpenAPI openAPI = openApiParserService.parseFromString(yamlContent);
 // 验证文档有效性
 boolean isValid = openApiParserService.isValidOpenAPI(openAPI);
 
-// 获取文档信息摘要
-String info = openApiParserService.getOpenAPIInfo(openAPI);
-System.out.println(info);
+// 直接访问OpenAPI对象的信息
+System.out.println("API标题: " + openAPI.getInfo().getTitle());
+System.out.println("API版本: " + openAPI.getInfo().getVersion());
+System.out.println("端点数量: " + openAPI.getPaths().size());
 ```
 
 ### 2. 集成到Spring Boot应用
@@ -70,12 +65,13 @@ public class MyController {
     @PostMapping("/api/analyze-openapi")
     public ResponseEntity<?> analyzeOpenAPI(@RequestBody Map<String, String> request) {
         try {
-            String url = request.get("url");
-            OpenAPI openAPI = openApiParserService.parseFromUrl(url);
+            String content = request.get("content");
+            OpenAPI openAPI = openApiParserService.parseFromString(content);
             
             return ResponseEntity.ok(Map.of(
                 "valid", openApiParserService.isValidOpenAPI(openAPI),
-                "info", openApiParserService.getOpenAPIInfo(openAPI),
+                "title", openAPI.getInfo().getTitle(),
+                "version", openAPI.getInfo().getVersion(),
                 "pathCount", openAPI.getPaths() != null ? openAPI.getPaths().size() : 0
             ));
         } catch (Exception e) {
@@ -110,30 +106,67 @@ public class MyController {
 
 ## 实际应用示例
 
-### 示例1: 分析Swagger Petstore API
+### 示例1: 解析复杂的OpenAPI文档
 
 ```java
 @Test
-public void analyzeSwaggerPetstore() {
-    String url = "https://petstore3.swagger.io/api/v3/openapi.json";
-    OpenAPI openAPI = openApiParserService.parseFromUrl(url);
+public void parseComplexOpenAPI() {
+    String yamlContent = """
+        openapi: 3.0.0
+        info:
+          title: Pet Store API
+          version: 1.0.0
+          description: A pet store API example
+        servers:
+          - url: https://petstore.example.com/v1
+        paths:
+          /pets:
+            get:
+              responses:
+                '200':
+                  description: A list of pets
+          /pets/{id}:
+            get:
+              parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+              responses:
+                '200':
+                  description: Pet details
+        components:
+          schemas:
+            Pet:
+              type: object
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+        """;
+    
+    OpenAPI openAPI = openApiParserService.parseFromString(yamlContent);
     
     // 验证解析结果
     assertTrue(openApiParserService.isValidOpenAPI(openAPI));
     
-    // 获取API信息
-    String info = openApiParserService.getOpenAPIInfo(openAPI);
-    System.out.println(info);
-    // 输出:
-    // 标题: Swagger Petstore - OpenAPI 3.0
-    // 版本: 1.0.27
-    // 描述: This is a sample Pet Store Server...
-    // API端点数量: 14
-    // 服务器: https://petstore3.swagger.io/api/v3
+    // 直接访问OpenAPI对象内容
+    assertEquals("Pet Store API", openAPI.getInfo().getTitle());
+    assertEquals("1.0.0", openAPI.getInfo().getVersion());
+    assertEquals("A pet store API example", openAPI.getInfo().getDescription());
+    assertEquals(2, openAPI.getPaths().size());
+    assertTrue(openAPI.getPaths().containsKey("/pets"));
+    assertTrue(openAPI.getPaths().containsKey("/pets/{id}"));
     
-    // 访问具体内容
-    assertNotNull(openAPI.getPaths().get("/pet"));
-    assertNotNull(openAPI.getComponents().getSchemas().get("Pet"));
+    // 验证组件
+    assertNotNull(openAPI.getComponents());
+    assertTrue(openAPI.getComponents().getSchemas().containsKey("Pet"));
+    
+    // 验证服务器信息
+    assertEquals(1, openAPI.getServers().size());
+    assertEquals("https://petstore.example.com/v1", openAPI.getServers().get(0).getUrl());
 }
 ```
 
@@ -217,18 +250,16 @@ mvn spring-boot:run
 ## 最佳实践
 
 1. **异常处理**: 始终捕获和处理`IllegalArgumentException`、`RuntimeException`和`IOException`
-2. **URL验证**: 在调用`parseFromUrl`前验证URL格式
-3. **文档验证**: 使用`isValidOpenAPI`验证解析结果
-4. **资源管理**: 解析大型文档时注意内存使用
+2. **文档验证**: 使用`isValidOpenAPI`验证解析结果
+3. **资源管理**: 解析大型文档时注意内存使用
 
 ## 故障排除
 
 ### 常见问题
 
 1. **解析失败**: 检查OpenAPI文档格式是否正确（YAML或JSON）
-2. **URL无法访问**: 确保网络连接和URL的可访问性
-3. **文件读取失败**: 检查文件路径和权限
-4. **内存不足**: 对于特别大的OpenAPI文档，可能需要调整JVM内存设置
+2. **文件读取失败**: 检查文件路径和权限
+3. **内存不足**: 对于特别大的OpenAPI文档，可能需要调整JVM内存设置
 
 ### 异常说明
 
@@ -252,9 +283,8 @@ logging:
 如需扩展功能，可以：
 
 1. **添加自定义验证**: 扩展`isValidOpenAPI`方法增加自定义验证规则
-2. **增强信息摘要**: 修改`getOpenAPIInfo`方法添加更多信息
-3. **支持更多格式**: 添加对其他API规范格式的支持
-4. **集成缓存**: 为频繁访问的OpenAPI文档添加缓存机制
+2. **支持更多格式**: 添加对其他API规范格式的支持
+3. **集成缓存**: 为频繁访问的OpenAPI文档添加缓存机制
 
 ## 许可证
 

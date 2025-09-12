@@ -16,29 +16,6 @@ import java.nio.file.Paths;
 @Service
 public class OpenApiParserService {
     
-    /**
-     * 从URL加载OpenAPI文档
-     * 
-     * @param url OpenAPI文档的URL地址
-     * @return 解析后的OpenAPI对象
-     * @throws IllegalArgumentException 如果URL为空或无效
-     */
-    public OpenAPI parseFromUrl(String url) {
-        if (url == null || url.trim().isEmpty()) {
-            throw new IllegalArgumentException("URL不能为空");
-        }
-        
-        ParseOptions parseOptions = new ParseOptions();
-        parseOptions.setResolve(true);
-        parseOptions.setResolveFully(true);
-        
-        var result = new OpenAPIParser().readLocation(url.trim(), null, parseOptions);
-        if (result.getOpenAPI() == null) {
-            throw new RuntimeException("无法从URL解析OpenAPI文档: " + url);
-        }
-        
-        return result.getOpenAPI();
-    }
     
     /**
      * 从文件路径加载OpenAPI文档
@@ -99,38 +76,4 @@ public class OpenApiParserService {
                !openAPI.getInfo().getTitle().trim().isEmpty();
     }
     
-    /**
-     * 获取OpenAPI文档的基本信息摘要
-     * 
-     * @param openAPI OpenAPI对象
-     * @return 包含标题、版本、描述等信息的字符串
-     */
-    public String getOpenAPIInfo(OpenAPI openAPI) {
-        if (openAPI == null || openAPI.getInfo() == null) {
-            return "无效的OpenAPI文档";
-        }
-        
-        var info = openAPI.getInfo();
-        StringBuilder summary = new StringBuilder();
-        summary.append("标题: ").append(info.getTitle()).append("\n");
-        summary.append("版本: ").append(info.getVersion()).append("\n");
-        
-        if (info.getDescription() != null && !info.getDescription().trim().isEmpty()) {
-            summary.append("描述: ").append(info.getDescription()).append("\n");
-        }
-        
-        if (openAPI.getPaths() != null) {
-            summary.append("API端点数量: ").append(openAPI.getPaths().size()).append("\n");
-        }
-        
-        if (openAPI.getServers() != null && !openAPI.getServers().isEmpty()) {
-            String serverUrl = openAPI.getServers().get(0).getUrl();
-            // 只有在服务器URL不是默认的"/"时才显示
-            if (serverUrl != null && !serverUrl.equals("/")) {
-                summary.append("服务器: ").append(serverUrl).append("\n");
-            }
-        }
-        
-        return summary.toString();
-    }
 }

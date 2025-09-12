@@ -160,35 +160,6 @@ public class OpenApiParserServiceTest {
         );
     }
     
-    @Test
-    public void testParseFromUrl_NullUrl() {
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> openApiParserService.parseFromUrl(null)
-        );
-        
-        assertThat(exception.getMessage()).isEqualTo("URL不能为空");
-    }
-    
-    @Test
-    public void testParseFromUrl_EmptyUrl() {
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> openApiParserService.parseFromUrl("")
-        );
-        
-        assertThat(exception.getMessage()).isEqualTo("URL不能为空");
-    }
-    
-    @Test
-    public void testParseFromUrl_WhitespaceUrl() {
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> openApiParserService.parseFromUrl("   ")
-        );
-        
-        assertThat(exception.getMessage()).isEqualTo("URL不能为空");
-    }
     
     @Test
     public void testIsValidOpenAPI_ValidDocument() {
@@ -225,79 +196,6 @@ public class OpenApiParserServiceTest {
         assertThat(openApiParserService.isValidOpenAPI(openAPI)).isFalse();
     }
     
-    @Test
-    public void testGetOpenAPIInfo_CompleteDocument() {
-        String content = """
-            openapi: 3.0.0
-            info:
-              title: Complete API
-              version: 2.3.1
-              description: A complete API with all details
-            servers:
-              - url: https://api.complete.com/v1
-              - url: https://staging.complete.com/v1
-            paths:
-              /users:
-                get:
-                  responses:
-                    '200':
-                      description: Success
-              /products:
-                post:
-                  responses:
-                    '201':
-                      description: Created
-              /orders:
-                get:
-                  responses:
-                    '200':
-                      description: Success
-            """;
-        
-        OpenAPI openAPI = openApiParserService.parseFromString(content);
-        String info = openApiParserService.getOpenAPIInfo(openAPI);
-        
-        assertThat(info).contains("标题: Complete API");
-        assertThat(info).contains("版本: 2.3.1");
-        assertThat(info).contains("描述: A complete API with all details");
-        assertThat(info).contains("API端点数量: 3");
-        assertThat(info).contains("服务器: https://api.complete.com/v1");
-    }
-    
-    @Test
-    public void testGetOpenAPIInfo_MinimalDocument() {
-        String content = """
-            openapi: 3.0.0
-            info:
-              title: Minimal API
-              version: 1.0.0
-            paths: {}
-            """;
-        
-        OpenAPI openAPI = openApiParserService.parseFromString(content);
-        String info = openApiParserService.getOpenAPIInfo(openAPI);
-        
-        assertThat(info).contains("标题: Minimal API");
-        assertThat(info).contains("版本: 1.0.0");
-        assertThat(info).contains("API端点数量: 0");
-        assertThat(info).doesNotContain("描述:");
-        assertThat(info).doesNotContain("服务器:");
-    }
-    
-    @Test
-    public void testGetOpenAPIInfo_NullDocument() {
-        String info = openApiParserService.getOpenAPIInfo(null);
-        
-        assertThat(info).isEqualTo("无效的OpenAPI文档");
-    }
-    
-    @Test
-    public void testGetOpenAPIInfo_NoInfo() {
-        OpenAPI openAPI = new OpenAPI();
-        String info = openApiParserService.getOpenAPIInfo(openAPI);
-        
-        assertThat(info).isEqualTo("无效的OpenAPI文档");
-    }
     
     @Test
     public void testParseFromString_WithReferences() {
@@ -387,9 +285,5 @@ public class OpenApiParserServiceTest {
         assertThat(openAPI.getServers().get(0).getUrl()).isEqualTo("https://prod.api.com");
         assertThat(openAPI.getServers().get(1).getUrl()).isEqualTo("https://staging.api.com");
         assertThat(openAPI.getServers().get(2).getUrl()).isEqualTo("https://dev.api.com");
-        
-        String info = openApiParserService.getOpenAPIInfo(openAPI);
-        // getOpenAPIInfo只显示第一个服务器
-        assertThat(info).contains("服务器: https://prod.api.com");
     }
 }

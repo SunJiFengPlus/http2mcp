@@ -174,21 +174,6 @@ public class OpenApiIntegrationTest {
         });
     }
     
-    @Test
-    public void testParseOpenApiFromUrl_InvalidUrl() {
-        // 测试无效URL应该抛出异常
-        assertThrows(IllegalArgumentException.class, () -> {
-            openApiParserService.parseFromUrl("");
-        });
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            openApiParserService.parseFromUrl(null);
-        });
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            openApiParserService.parseFromUrl("   ");
-        });
-    }
     
     @Test
     public void testIsValidOpenAPI() {
@@ -212,42 +197,6 @@ public class OpenApiIntegrationTest {
         assertThat(openApiParserService.isValidOpenAPI(invalidOpenAPI)).isFalse();
     }
     
-    @Test
-    public void testGetOpenAPIInfo() {
-        String openApiContent = """
-            openapi: 3.0.0
-            info:
-              title: Test API
-              version: 2.1.0
-              description: This is a test API
-            servers:
-              - url: https://api.example.com
-            paths:
-              /users:
-                get:
-                  responses:
-                    '200':
-                      description: OK
-              /products:
-                post:
-                  responses:
-                    '201':
-                      description: Created
-            """;
-        
-        OpenAPI openAPI = openApiParserService.parseFromString(openApiContent);
-        String info = openApiParserService.getOpenAPIInfo(openAPI);
-        
-        assertThat(info).contains("标题: Test API");
-        assertThat(info).contains("版本: 2.1.0");
-        assertThat(info).contains("描述: This is a test API");
-        assertThat(info).contains("API端点数量: 2");
-        assertThat(info).contains("服务器: https://api.example.com");
-        
-        // 测试null OpenAPI
-        String nullInfo = openApiParserService.getOpenAPIInfo(null);
-        assertThat(nullInfo).isEqualTo("无效的OpenAPI文档");
-    }
     
     @Test
     public void testComplexOpenAPIDocument() {
@@ -350,9 +299,8 @@ public class OpenApiIntegrationTest {
         // 验证有效性
         assertThat(openApiParserService.isValidOpenAPI(openAPI)).isTrue();
         
-        // 验证信息摘要
-        String info = openApiParserService.getOpenAPIInfo(openAPI);
-        assertThat(info).contains("Complex Pet Store API");
-        assertThat(info).contains("API端点数量: 2");
+        // 直接验证OpenAPI对象内容
+        assertThat(openAPI.getInfo().getTitle()).isEqualTo("Complex Pet Store API");
+        assertThat(openAPI.getPaths()).hasSize(2);
     }
 }
