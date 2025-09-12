@@ -1,0 +1,295 @@
+openapi: 3.0.0
+info:
+  title: Sample Pet Store API
+  description: A sample API that demonstrates OpenAPI testing capabilities
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: https://petstore3.swagger.io/api/v3
+    description: Production server
+  - url: https://httpbin.org
+    description: Test server
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      description: Returns a list of all pets in the store
+      operationId: listPets
+      tags:
+        - pets
+      parameters:
+        - name: limit
+          in: query
+          description: How many items to return at one time (max 100)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            maximum: 100
+            example: 10
+        - name: status
+          in: query
+          description: Status filter for pets
+          required: false
+          schema:
+            type: string
+            enum:
+              - available
+              - pending
+              - sold
+            example: available
+      responses:
+        '200':
+          description: A paged array of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+              example:
+                - id: 1
+                  name: "Fluffy"
+                  status: "available"
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+    post:
+      summary: Create a pet
+      description: Creates a new pet in the store
+      operationId: createPet
+      tags:
+        - pets
+      requestBody:
+        description: Pet object that needs to be added to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+            example:
+              name: "Buddy"
+              tag: "dog"
+      responses:
+        '201':
+          description: Pet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+  /pets/{petId}:
+    get:
+      summary: Get pet by ID
+      description: Returns a single pet by ID
+      operationId: getPetById
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          description: ID of pet to return
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 123
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          description: Pet not found
+        '400':
+          description: Invalid ID supplied
+    put:
+      summary: Update an existing pet
+      description: Updates an existing pet in the store
+      operationId: updatePet
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          description: ID of pet to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 123
+      requestBody:
+        description: Pet object that needs to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+            example:
+              id: 123
+              name: "Updated Pet"
+              status: "sold"
+      responses:
+        '200':
+          description: Pet updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Pet not found
+        '422':
+          description: Validation exception
+    delete:
+      summary: Deletes a pet
+      description: Deletes a pet from the store
+      operationId: deletePet
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          description: Pet id to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 123
+        - name: api_key
+          in: header
+          required: false
+          schema:
+            type: string
+            example: "special-key"
+      responses:
+        '204':
+          description: Pet deleted successfully
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Pet not found
+
+  /get:
+    get:
+      summary: Simple GET test
+      description: A simple GET request for testing purposes (using httpbin)
+      operationId: simpleGet
+      tags:
+        - test
+      parameters:
+        - name: test_param
+          in: query
+          description: A test parameter
+          required: false
+          schema:
+            type: string
+            example: "test_value"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  args:
+                    type: object
+                  headers:
+                    type: object
+                  origin:
+                    type: string
+                  url:
+                    type: string
+
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        name:
+          type: string
+          example: "doggie"
+        category:
+          $ref: '#/components/schemas/Category'
+        photoUrls:
+          type: array
+          items:
+            type: string
+          example:
+            - "https://example.com/photo1.jpg"
+            - "https://example.com/photo2.jpg"
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        status:
+          type: string
+          description: pet status in the store
+          enum:
+            - available
+            - pending
+            - sold
+          example: available
+
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "doggie"
+        tag:
+          type: string
+          example: "dog"
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Dogs"
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "friendly"
+
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        type:
+          type: string
+        message:
+          type: string
