@@ -8,3 +8,34 @@ spring:
 camel:
   springboot:
     main-run-controller: true
+
+# OpenAPI到MCP工具转换配置
+openapi:
+  # 默认的OpenAPI规范文件路径
+  default-spec-path: src/test/resources/sample-openapi.yaml
+  # 自动加载OpenAPI规范文件的目录
+  auto-load-directory: src/test/resources
+  # 是否在应用启动时自动加载OpenAPI规范
+  auto-load-on-startup: true
+  # 工具配置
+  tools:
+    # 是否启用静态工具注册
+    enable-static-tools: true
+    # 是否启用动态工具生成
+    enable-dynamic-tools: true
+    # 工具名称前缀
+    tool-name-prefix: "openapi_"
+    # 默认请求超时时间（毫秒）
+    default-timeout: 30000
+
+# 日志配置
+logging:
+  level:
+    org.apache.camel.examples.service: DEBUG
+    org.springframework.ai: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,openapi-tools
