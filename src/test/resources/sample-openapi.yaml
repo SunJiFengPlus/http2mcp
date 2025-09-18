@@ -1,184 +1,109 @@
 openapi: 3.0.0
 info:
-  title: Sample Pet Store API
-  description: A sample API that demonstrates OpenAPI testing capabilities
+  title: HTTPBin Test API
+  description: A sample API that demonstrates HTTP testing capabilities using httpbin.org
   version: 1.0.0
   contact:
     name: API Support
-    email: support@example.com
+    email: support@httpbin.org
 servers:
-  - url: https://petstore3.swagger.io/api/v3
-    description: Production server
   - url: https://httpbin.org
     description: Test server
 paths:
-  /pets:
+  /json:
     get:
-      summary: List all pets
-      description: Returns a list of all pets in the store
-      operationId: listPets
+      summary: Get JSON response
+      description: Returns a simple JSON response for testing
+      operationId: getJson
       tags:
-        - pets
+        - httpbin
       parameters:
-        - name: limit
+        - name: size
           in: query
-          description: How many items to return at one time (max 100)
+          description: Size of the response
           required: false
           schema:
             type: integer
             format: int32
-            maximum: 100
+            maximum: 1000
             example: 10
-        - name: status
+        - name: type
           in: query
-          description: Status filter for pets
+          description: Response type
           required: false
           schema:
             type: string
             enum:
-              - available
-              - pending
-              - sold
-            example: available
+              - json
+              - xml
+              - html
+            example: json
       responses:
         '200':
-          description: A paged array of pets
+          description: Successful JSON response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Pet'
+                type: object
+                properties:
+                  slideshow:
+                    type: object
+                    properties:
+                      author:
+                        type: string
+                        example: "Yours Truly"
+                      date:
+                        type: string
+                        example: "date of publication"
+                      slides:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Slide'
               example:
-                - id: 1
-                  name: "Fluffy"
-                  status: "available"
+                slideshow:
+                  author: "Yours Truly"
+                  date: "date of publication"
+                  slides:
+                    - title: "Wake up to WonderWidgets!"
+                      type: "all"
+                    - title: "Overview"
+                      type: "all"
         '400':
           description: Bad request
         '500':
           description: Internal server error
-    post:
-      summary: Create a pet
-      description: Creates a new pet in the store
-      operationId: createPet
-      tags:
-        - pets
-      requestBody:
-        description: Pet object that needs to be added to the store
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NewPet'
-            example:
-              name: "Buddy"
-              tag: "dog"
-      responses:
-        '201':
-          description: Pet created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pet'
-        '400':
-          description: Invalid input
-        '422':
-          description: Validation exception
 
-  /pets/{petId}:
+  /headers:
     get:
-      summary: Get pet by ID
-      description: Returns a single pet by ID
-      operationId: getPetById
+      summary: Get request headers
+      description: Returns the request headers
+      operationId: getHeaders
       tags:
-        - pets
+        - httpbin
       parameters:
-        - name: petId
-          in: path
-          description: ID of pet to return
-          required: true
-          schema:
-            type: integer
-            format: int64
-            example: 123
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pet'
-        '404':
-          description: Pet not found
-        '400':
-          description: Invalid ID supplied
-    put:
-      summary: Update an existing pet
-      description: Updates an existing pet in the store
-      operationId: updatePet
-      tags:
-        - pets
-      parameters:
-        - name: petId
-          in: path
-          description: ID of pet to update
-          required: true
-          schema:
-            type: integer
-            format: int64
-            example: 123
-      requestBody:
-        description: Pet object that needs to be updated
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Pet'
-            example:
-              id: 123
-              name: "Updated Pet"
-              status: "sold"
-      responses:
-        '200':
-          description: Pet updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pet'
-        '400':
-          description: Invalid ID supplied
-        '404':
-          description: Pet not found
-        '422':
-          description: Validation exception
-    delete:
-      summary: Deletes a pet
-      description: Deletes a pet from the store
-      operationId: deletePet
-      tags:
-        - pets
-      parameters:
-        - name: petId
-          in: path
-          description: Pet id to delete
-          required: true
-          schema:
-            type: integer
-            format: int64
-            example: 123
-        - name: api_key
+        - name: User-Agent
           in: header
+          description: User agent string
           required: false
           schema:
             type: string
-            example: "special-key"
+            example: "HTTPBin-Test/1.0"
       responses:
-        '204':
-          description: Pet deleted successfully
+        '200':
+          description: Request headers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  headers:
+                    type: object
+                    example:
+                      Host: "httpbin.org"
+                      User-Agent: "HTTPBin-Test/1.0"
+                      Accept: "application/json"
         '400':
-          description: Invalid ID supplied
-        '404':
-          description: Pet not found
+          description: Bad request
 
   /get:
     get:
@@ -186,7 +111,7 @@ paths:
       description: A simple GET request for testing purposes (using httpbin)
       operationId: simpleGet
       tags:
-        - test
+        - httpbin
       parameters:
         - name: test_param
           in: query
@@ -205,91 +130,35 @@ paths:
                 properties:
                   args:
                     type: object
+                    example:
+                      test_param: "test_value"
                   headers:
                     type: object
+                    example:
+                      Host: "httpbin.org"
+                      User-Agent: "curl/7.64.1"
                   origin:
                     type: string
+                    example: "203.0.113.1"
                   url:
                     type: string
+                    example: "https://httpbin.org/get?test_param=test_value"
 
 components:
   schemas:
-    Pet:
+    Slide:
       type: object
-      required:
-        - id
-        - name
       properties:
-        id:
-          type: integer
-          format: int64
-          example: 10
-        name:
+        title:
           type: string
-          example: "doggie"
-        category:
-          $ref: '#/components/schemas/Category'
-        photoUrls:
+          example: "Wake up to WonderWidgets!"
+        type:
+          type: string
+          example: "all"
+        items:
           type: array
           items:
             type: string
           example:
-            - "https://example.com/photo1.jpg"
-            - "https://example.com/photo2.jpg"
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
-        status:
-          type: string
-          description: pet status in the store
-          enum:
-            - available
-            - pending
-            - sold
-          example: available
-
-    NewPet:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          example: "doggie"
-        tag:
-          type: string
-          example: "dog"
-
-    Category:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-          example: 1
-        name:
-          type: string
-          example: "Dogs"
-
-    Tag:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-          example: 1
-        name:
-          type: string
-          example: "friendly"
-
-    ApiResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          format: int32
-        type:
-          type: string
-        message:
-          type: string
+            - "Why <em>WonderWidgets</em> are great"
+            - "Who <em>buys</em> WonderWidgets"

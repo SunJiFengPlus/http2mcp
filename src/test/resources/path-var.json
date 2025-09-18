@@ -1,0 +1,119 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "默认模块",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [],
+  "paths": {
+    "/tracingWeb/tracing-api/api/v1/apm/jvm/services/cpu/instances/{instance}": {
+      "post": {
+        "summary": "MCP-获取CPU使用率指标",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "instance",
+            "in": "path",
+            "description": "实例",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "结束时间, 毫秒时间戳",
+            "required": true,
+            "example": "1755668477398",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projectId": {
+                    "type": "string",
+                    "description": "应用, 写死project-dc23000004"
+                  },
+                  "serviceName": {
+                    "type": "string",
+                    "description": "服务名"
+                  },
+                  "serviceVersion": {
+                    "type": "string",
+                    "description": "服务版本, 写死\"\"(空字符串)"
+                  }
+                },
+                "required": [
+                  "projectId",
+                  "serviceName",
+                  "serviceVersion"
+                ]
+              },
+              "example": {
+                "projectId": "project-dc23000004",
+                "serviceName": "paas-test-dump-log",
+                "serviceVersion": "v20250718172350789"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "status": 0,
+                  "statusText": "Success",
+                  "message": "Success",
+                  "timestamp": 1755671595600,
+                  "data": [
+                    {
+                      "metricName": "jvm_cpu",
+                      "metrics": [
+                        {
+                          "value": 1,
+                          "time": 1755664877398
+                        },
+                        {
+                          "value": 1,
+                          "time": 1755664937398
+                        },
+                        {
+                          "value": 1,
+                          "time": 1755668477398
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {}
+  },
+  "servers": [],
+  "security": []
+}

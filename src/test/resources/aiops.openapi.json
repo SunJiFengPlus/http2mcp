@@ -1,0 +1,247 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "aiops数据来源",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [],
+  "paths": {
+    "/logserviceWeb/api/v1/log-analysis/search": {
+      "post": {
+        "summary": "MCP-获取服务日志",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "cloudType",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "example": "HW_CLOUD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dataCenter",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "example": "NORTH_CITY",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "envType",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "example": "SIT",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vpc",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "example": "JT_PR_SL2_Serv_VPC01",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ccsRemote",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": "application/json;charset=UTF-8",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Cookie",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": "sensorsdata2015jssdkcross=%7B%22distinct_id%22%3A%22paas-test%22%2C%22first_id%22%3A%22198a66c5ad52a-0c3488d073be8b-4c657b58-921600-198a66c5ad6431%22%2C%22props%22%3A%7B%22%24latest_traffic_source_type%22%3A%22url%E7%9A%84domain%E8%A7%A3%E6%9E%90%E5%A4%B1%E8%B4%A5%22%2C%22%24latest_search_keyword%22%3A%22url%E7%9A%84domain%E8%A7%A3%E6%9E%90%E5%A4%B1%E8%B4%A5%22%2C%22%24latest_referrer%22%3A%22url%E7%9A%84domain%E8%A7%A3%E6%9E%90%E5%A4%B1%E8%B4%A5%22%7D%2C%22identities%22%3A%22eyIkaWRlbnRpdHlfY29va2llX2lkIjoiMTk4YTY2YzVhZDUyYS0wYzM0ODhkMDczYmU4Yi00YzY1N2I1OC05MjE2MDAtMTk4YTY2YzVhZDY0MzEiLCIkaWRlbnRpdHlfbG9naW5faWQiOiJwYWFzLXRlc3QifQ%3D%3D%22%2C%22history_login_id%22%3A%7B%22name%22%3A%22%24identity_login_id%22%2C%22value%22%3A%22paas-test%22%7D%7D; Admin-Token=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2tleSI6Ijc0NTc5YzhiZDlmZTRhMWM4ZWJjOGU4NzY4MmU3OWU1IiwidXNlckNvZGUiOiJwYWFzLXRlc3QifQ.6gEuCJk-Cj01iMR5TN8iJ5721xxHIVCdI38H4r1SYHw; tenantName=; LoginFlag=loginSuccess; userCode=paas-test; 364faf23-c714-4a4c-90d1-cfa0b7c3c929=WyIzODQ1NDg3OTgxIl0",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "startTime": {
+                    "type": "string"
+                  },
+                  "endTime": {
+                    "type": "string"
+                  },
+                  "useIndexPattern": {
+                    "type": "boolean"
+                  },
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "serviceName": {
+                    "type": "string"
+                  },
+                  "indexPatternId": {
+                    "type": "string"
+                  },
+                  "hosts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "logType": {
+                    "type": "string"
+                  },
+                  "queryString": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "integer"
+                  },
+                  "size": {
+                    "type": "integer"
+                  },
+                  "timeRange": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "sort": {
+                    "type": "string"
+                  },
+                  "deafultTime": {
+                    "type": "string"
+                  },
+                  "dataCenter": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "serviceGroupName": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "groupType": {
+                    "type": "string"
+                  },
+                  "podList": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "appType": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "startTime",
+                  "endTime",
+                  "useIndexPattern",
+                  "projectId",
+                  "serviceName",
+                  "indexPatternId",
+                  "hosts",
+                  "logType",
+                  "queryString",
+                  "from",
+                  "size",
+                  "timeRange",
+                  "sort",
+                  "deafultTime",
+                  "dataCenter",
+                  "pattern",
+                  "serviceGroupName",
+                  "groupType",
+                  "podList",
+                  "appType"
+                ]
+              },
+              "example": {
+                "startTime": "2025-08-25 16:16:26",
+                "endTime": "2025-08-25 17:16:26",
+                "useIndexPattern": false,
+                "projectId": "project-dc23000004",
+                "serviceName": "paas-test-dump-log",
+                "indexPatternId": "",
+                "hosts": [],
+                "logType": "",
+                "queryString": "tid:\"TID:78ab179218234cc4a40e2a29b9985709.76.17561134183623055\"",
+                "from": 0,
+                "size": 10000,
+                "timeRange": [
+                  "2025-08-25 16:16:26",
+                  "2025-08-25 17:16:26"
+                ],
+                "sort": "@timestamp desc",
+                "deafultTime": "2025-08-25 16:16:26 至 2025-08-25 17:16:26",
+                "dataCenter": [
+                  "NORTH_CITY"
+                ],
+                "pattern": "",
+                "serviceGroupName": [],
+                "groupType": "",
+                "podList": [],
+                "appType": "MICRO_SERVICE"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {}
+  },
+  "servers": [],
+  "security": []
+}
