@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.Content;
@@ -40,57 +41,56 @@ public class OpenApiToolFactory {
         this.httpExecutor = httpExecutor;
     }
 
-    public List<ToolCallback> buildTools(OpenApiDocument document) {
-        if (document.openApi().getPaths() == null || document.openApi().getPaths().isEmpty()) {
+    public List<ToolCallback> buildTools(OpenApiSpecProperties.Spec spec, OpenAPI openApi) {
+        Assert.notNull(openApi, "OpenAPI document must not be null");
+        Assert.hasText(spec.getId(), "Spec id must not be empty");
+        if (openApi.getPaths() == null || openApi.getPaths().isEmpty()) {
             return List.of();
         }
-        return document.openApi()
-            .getPaths()
+        return openApi.getPaths()
             .entrySet()
             .stream()
-            .flatMap(entry -> createDescriptors(document, entry.getKey(), entry.getValue()).stream())
-            .map(this::createCallback)
+            .flatMap(entry -> pathOperations(spec, openApi, entry.getKey(), entry.getValue()).stream())
             .toList();
     }
 
-    private ToolCallback createCallback(OpenApiToolDescriptor descriptor) {
-        return FunctionToolCallback.<Map<String, Object>, Map<String, Object>>builder(descriptor.toolName(),
-                (payload, context) -> this.httpExecutor.execute(descriptor, payload))
-            .description(descriptor.description())
-            .inputSchema(this.schemaBuilder.buildSchema(descriptor))
-            .inputType(TOOL_INPUT_TYPE)
-            .build();
-    }
-
-    private List<OpenApiToolDescriptor> createDescriptors(OpenApiDocument document, String path, PathItem pathItem) {
+    private List<ToolCallback> pathOperations(OpenApiSpecProperties.Spec spec, OpenAPI openApi, String path,
+            PathItem pathItem) {
         return pathItem.readOperationsMap()
             .entrySet()
             .stream()
-            .map(entry -> createDescriptor(document, path, entry.getKey(), entry.getValue(), pathItem))
+            .map(entry -> createCallback(spec, openApi, path, pathItem, entry.getKey(), entry.getValue()))
             .flatMap(Optional::stream)
             .toList();
     }
 
-    private Optional<OpenApiToolDescriptor> createDescriptor(OpenApiDocument document, String path,
-            PathItem.HttpMethod httpMethod, Operation operation, PathItem pathItem) {
+    private Optional<ToolCallback> createCallback(OpenApiSpecProperties.Spec spec, OpenAPI openApi, String path,
+            PathItem pathItem, PathItem.HttpMethod httpMethod, Operation operation) {
         HttpMethod method = HttpMethod.valueOf(httpMethod.name());
-        String serverUrl = resolveServerUrl(document, pathItem, operation);
+        String serverUrl = resolveServerUrl(spec, openApi, pathItem, operation);
         if (!StringUtils.hasText(serverUrl)) {
             return Optional.empty();
         }
-        var descriptor = new OpenApiToolDescriptor(document.id(), toolName(document.id(), path, method, operation),
-                toolDescription(operation, path),
-                method,
-                serverUrl,
-                normalizePath(path),
-                resolveParameters(operation, pathItem, "path"),
-                resolveParameters(operation, pathItem, "query"),
-                resolveParameters(operation, pathItem, "header"),
-                resolveRequestBodySchema(operation),
-                resolveRequestBodyMediaType(operation),
-                isRequestBodyRequired(operation),
-                document.defaultHeaders());
-        return Optional.of(descriptor);
+        String normalizedPath = normalizePath(path);
+        List<Parameter> pathParameters = resolveParameters(operation, pathItem, "path");
+        List<Parameter> queryParameters = resolveParameters(operation, pathItem, "query");
+        List<Parameter> headerParameters = resolveParameters(operation, pathItem, "header");
+        Schema<?> requestBodySchema = resolveRequestBodySchema(operation);
+        boolean requestBodyRequired = isRequestBodyRequired(operation);
+        String toolName = toolName(spec.getId(), normalizedPath, method, operation);
+        String description = toolDescription(operation, path);
+        String inputSchema = this.schemaBuilder.buildSchema(toolName, pathParameters, queryParameters,
+                headerParameters, requestBodySchema, requestBodyRequired);
+
+        ToolCallback callback = FunctionToolCallback.<Map<String, Object>, Map<String, Object>>builder(toolName,
+                (payload, context) -> this.httpExecutor.execute(method, serverUrl, normalizedPath, pathParameters,
+                        queryParameters, headerParameters, requestBodySchema, requestBodyRequired,
+                        spec.getDefaultHeaders(), payload))
+            .description(description)
+            .inputSchema(inputSchema)
+            .inputType(TOOL_INPUT_TYPE)
+            .build();
+        return Optional.of(callback);
     }
 
     private String toolName(String specId, String path, HttpMethod method, Operation operation) {
@@ -118,8 +118,7 @@ public class OpenApiToolFactory {
         return path.startsWith("/") ? path : "/" + path;
     }
 
-    private List<OpenApiToolDescriptor.OpenApiParameter> resolveParameters(Operation operation, PathItem pathItem,
-            String location) {
+    private List<Parameter> resolveParameters(Operation operation, PathItem pathItem, String location) {
         List<Parameter> parameters = new ArrayList<>();
         if (pathItem.getParameters() != null) {
             parameters.addAll(pathItem.getParameters());
@@ -129,14 +128,22 @@ public class OpenApiToolFactory {
         }
         return parameters.stream()
             .filter(parameter -> Objects.equals(parameter.getIn(), location))
-            .map(parameter -> new OpenApiToolDescriptor.OpenApiParameter(parameter.getName(),
-                    parameterSchema(parameter),
-                    Boolean.TRUE.equals(parameter.getRequired()),
-                    parameter.getDescription()))
+            .map(this::ensureSchema)
             .toList();
     }
 
-    private Schema<?> parameterSchema(Parameter parameter) {
+    private Parameter ensureSchema(Parameter parameter) {
+        if (parameter.getSchema() != null) {
+            return parameter;
+        }
+        Schema<?> schema = extractSchema(parameter);
+        if (schema != null) {
+            parameter.setSchema(schema);
+        }
+        return parameter;
+    }
+
+    private Schema<?> extractSchema(Parameter parameter) {
         if (parameter.getSchema() != null) {
             return parameter.getSchema();
         }
@@ -161,25 +168,18 @@ public class OpenApiToolFactory {
             .orElse(null);
     }
 
-    private String resolveRequestBodyMediaType(Operation operation) {
-        RequestBody requestBody = operation.getRequestBody();
-        if (requestBody == null || requestBody.getContent() == null || requestBody.getContent().isEmpty()) {
-            return null;
-        }
-        return requestBody.getContent().keySet().iterator().next();
-    }
-
     private boolean isRequestBodyRequired(Operation operation) {
         return operation.getRequestBody() != null && Boolean.TRUE.equals(operation.getRequestBody().getRequired());
     }
 
-    private String resolveServerUrl(OpenApiDocument document, PathItem pathItem, Operation operation) {
-        if (StringUtils.hasText(document.serverUrlOverride())) {
-            return document.serverUrlOverride();
+    private String resolveServerUrl(OpenApiSpecProperties.Spec spec, OpenAPI openApi, PathItem pathItem,
+            Operation operation) {
+        if (StringUtils.hasText(spec.getServerUrlOverride())) {
+            return spec.getServerUrlOverride();
         }
         return StreamBuilder.from(operation.getServers())
             .or(pathItem.getServers())
-            .or(document.openApi().getServers())
+            .or(openApi.getServers())
             .map(this::expandServerUrl)
             .orElse(null);
     }

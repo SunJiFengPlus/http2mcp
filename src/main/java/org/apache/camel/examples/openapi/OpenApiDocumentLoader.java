@@ -2,13 +2,12 @@ package org.apache.camel.examples.openapi;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.swagger.v3.oas.models.OpenAPI;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -29,14 +28,7 @@ public class OpenApiDocumentLoader {
         this.resourceLoader = resourceLoader;
     }
 
-    public List<OpenApiDocument> load(OpenApiSpecProperties properties) {
-        return properties.getSpecs()
-            .stream()
-            .map(this::loadDocument)
-            .toList();
-    }
-
-    private OpenApiDocument loadDocument(OpenApiSpecProperties.Spec spec) {
+    public OpenAPI load(OpenApiSpecProperties.Spec spec) {
         Assert.hasText(spec.getId(), "Spec id must not be empty");
         Assert.hasText(spec.getLocation(), "Spec location must not be empty");
         Resource resource = this.resourceLoader.getResource(spec.getLocation());
@@ -46,8 +38,7 @@ public class OpenApiDocumentLoader {
         logParserMessages(spec, result);
         Assert.notNull(result.getOpenAPI(),
                 () -> "Unable to parse OpenAPI definition for spec %s".formatted(spec.getId()));
-        return new OpenApiDocument(spec.getId(), result.getOpenAPI(), spec.getDefaultHeaders(),
-                spec.getServerUrlOverride());
+        return result.getOpenAPI();
     }
 
     private static ParseOptions createParseOptions() {

@@ -65,6 +65,11 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webflux</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-spring-webflux</artifactId>
+            <version>0.17.0</version>
+        </dependency>
         
         <!-- OpenAPI parsing dependencies -->
         <dependency>

@@ -9,12 +9,15 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -34,18 +37,24 @@ public class OpenApiHttpExecutor {
         this.objectMapper = objectMapper;
     }
 
-    public Map<String, Object> execute(OpenApiToolDescriptor descriptor, Map<String, Object> arguments) {
-        URI uri = buildUri(descriptor, arguments);
+    public Map<String, Object> execute(HttpMethod method, String serverUrl, String pathTemplate,
+            List<Parameter> pathParameters, List<Parameter> queryParameters, List<Parameter> headerParameters,
+            Schema<?> requestBodySchema, boolean requestBodyRequired, Map<String, String> defaultHeaders,
+            Map<String, Object> arguments) {
+        URI uri = buildUri(serverUrl, pathTemplate, pathParameters, queryParameters, arguments);
         WebClient.RequestBodySpec requestSpec = this.webClient
-            .method(descriptor.method())
+            .method(method)
             .uri(uri)
             .accept(MediaType.APPLICATION_JSON);
 
-        descriptor.defaultHeaders().forEach(requestSpec::header);
-        applyHeaderParameters(descriptor.headerParameters(), arguments, requestSpec);
+        if (!CollectionUtils.isEmpty(defaultHeaders)) {
+            defaultHeaders.forEach(requestSpec::header);
+        }
+        applyHeaderParameters(headerParameters, arguments, requestSpec);
 
-        Object body = descriptor.requestBodySchema() != null ? arguments.get("body") : null;
-        ResponseEntity<String> response = send(descriptor.method(), requestSpec, body);
+        Object body = requestBodySchema != null ? arguments.get("body") : null;
+        Assert.state(!requestBodyRequired || body != null, "Missing required request body");
+        ResponseEntity<String> response = send(method, requestSpec, body);
         return toToolResponse(uri, response);
     }
 
@@ -65,37 +74,36 @@ public class OpenApiHttpExecutor {
         }
     }
 
-    private URI buildUri(OpenApiToolDescriptor descriptor, Map<String, Object> arguments) {
-        Map<String, Object> pathVariables = descriptor.pathParameters()
+    private URI buildUri(String serverUrl, String pathTemplate, List<Parameter> pathParameters,
+            List<Parameter> queryParameters, Map<String, Object> arguments) {
+        Map<String, Object> pathVariables = pathParameters
             .stream()
             .collect(LinkedHashMap::new,
-                    (map, parameter) -> map.put(parameter.name(), resolveRequiredValue(parameter, arguments)),
+                    (map, parameter) -> map.put(parameter.getName(), resolveRequiredValue(parameter, arguments)),
                     LinkedHashMap::putAll);
 
-        UriComponentsBuilder baseBuilder = UriComponentsBuilder.fromHttpUrl(descriptor.serverUrl())
-            .path(descriptor.pathTemplate());
+        UriComponentsBuilder baseBuilder = UriComponentsBuilder.fromHttpUrl(serverUrl).path(pathTemplate);
         String resolvedPath = baseBuilder.buildAndExpand(pathVariables).toUriString();
         UriComponentsBuilder finalBuilder = UriComponentsBuilder.fromUriString(resolvedPath);
-        descriptor.queryParameters()
+        queryParameters
             .forEach(parameter -> resolveOptionalValue(parameter, arguments)
-                .ifPresent(value -> finalBuilder.queryParam(parameter.name(), value)));
+                .ifPresent(value -> finalBuilder.queryParam(parameter.getName(), value)));
         return finalBuilder.build(true).toUri();
     }
 
-    private void applyHeaderParameters(List<OpenApiToolDescriptor.OpenApiParameter> headerParameters,
-            Map<String, Object> arguments, WebClient.RequestBodySpec requestSpec) {
+    private void applyHeaderParameters(List<Parameter> headerParameters, Map<String, Object> arguments,
+            WebClient.RequestBodySpec requestSpec) {
         headerParameters.forEach(parameter -> applyHeaderParameter(parameter, arguments, requestSpec));
     }
 
-    private Object resolveRequiredValue(OpenApiToolDescriptor.OpenApiParameter parameter, Map<String, Object> arguments) {
-        Object value = arguments.get(parameter.name());
-        Assert.state(value != null, () -> "Missing required parameter: " + parameter.name());
+    private Object resolveRequiredValue(Parameter parameter, Map<String, Object> arguments) {
+        Object value = arguments.get(parameter.getName());
+        Assert.state(value != null, () -> "Missing required parameter: " + parameter.getName());
         return value;
     }
 
-    private Optional<Object> resolveOptionalValue(OpenApiToolDescriptor.OpenApiParameter parameter,
-            Map<String, Object> arguments) {
-        Object value = arguments.get(parameter.name());
+    private Optional<Object> resolveOptionalValue(Parameter parameter, Map<String, Object> arguments) {
+        Object value = arguments.get(parameter.getName());
         if (value == null) {
             return Optional.empty();
         }
@@ -130,13 +138,14 @@ public class OpenApiHttpExecutor {
         }
     }
 
-    private void applyHeaderParameter(OpenApiToolDescriptor.OpenApiParameter parameter, Map<String, Object> arguments,
+    private void applyHeaderParameter(Parameter parameter, Map<String, Object> arguments,
             WebClient.RequestBodySpec requestSpec) {
         Optional<Object> value = resolveOptionalValue(parameter, arguments);
         if (value.isPresent()) {
-            requestSpec.header(parameter.name(), value.get().toString());
+            requestSpec.header(parameter.getName(), value.get().toString());
             return;
         }
-        Assert.state(!parameter.required(), () -> "Missing required header parameter: " + parameter.name());
+        Assert.state(!Boolean.TRUE.equals(parameter.getRequired()),
+                () -> "Missing required header parameter: " + parameter.getName());
     }
 }

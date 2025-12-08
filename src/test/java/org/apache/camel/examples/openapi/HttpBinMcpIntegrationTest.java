@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
+import io.modelcontextprotocol.client.transport.WebClientStreamableHttpTransport;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,10 +27,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         properties = {
                 "server.port=18888",
                 "spring.main.web-application-type=reactive",
-                "spring.ai.mcp.server.base-url=http://localhost:18888",
-                "spring.ai.mcp.server.sse-endpoint=/it/sse",
-                "spring.ai.mcp.server.sse-message-endpoint=/it/message",
                 "spring.ai.mcp.server.stdio=false",
+                "spring.ai.mcp.server.protocol=STREAMABLE",
+                "spring.ai.mcp.server.streamable-http.mcp-endpoint=/it/mcp",
                 "spring.ai.mcp.server.capabilities.resource=false",
                 "spring.ai.mcp.server.capabilities.prompt=false",
                 "spring.ai.mcp.server.capabilities.completion=false",
@@ -75,8 +75,9 @@ class HttpBinMcpIntegrationTest {
     }
 
     private McpSyncClient createClient() {
-        HttpClientSseClientTransport transport = HttpClientSseClientTransport.builder("http://localhost:18888")
-            .sseEndpoint("/it/sse")
+        WebClientStreamableHttpTransport transport = WebClientStreamableHttpTransport.builder(WebClient.builder())
+            .endpoint("http://localhost:18888/it/mcp")
+            .supportedProtocolVersions(List.of("2024-11-05"))
             .build();
         return McpClient.sync(transport).requestTimeout(Duration.ofSeconds(20)).build();
     }

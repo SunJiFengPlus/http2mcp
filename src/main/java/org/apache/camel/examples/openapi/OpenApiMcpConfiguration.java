@@ -15,9 +15,9 @@ public class OpenApiMcpConfiguration {
     @Bean
     public ToolCallbackProvider openApiToolCallbackProvider(OpenApiSpecProperties properties,
             OpenApiDocumentLoader loader, OpenApiToolFactory factory) {
-        List<ToolCallback> callbacks = loader.load(properties)
+        List<ToolCallback> callbacks = properties.getSpecs()
             .stream()
-            .flatMap(document -> factory.buildTools(document).stream())
+            .flatMap(spec -> factory.buildTools(spec, loader.load(spec)).stream())
             .toList();
         return ToolCallbackProvider.from(callbacks);
     }

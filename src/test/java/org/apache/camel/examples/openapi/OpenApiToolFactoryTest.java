@@ -24,11 +24,9 @@ class OpenApiToolFactoryTest {
 
     @Test
     void shouldBuildCallbacksPerOperation() {
-        OpenApiSpecProperties properties = new OpenApiSpecProperties();
-        properties.setSpecs(List.of(spec("json", "classpath:/openapi/httpbin-post.json")));
-        OpenApiDocument document = loader.load(properties).get(0);
+        OpenApiSpecProperties.Spec spec = spec("json", "classpath:/openapi/httpbin-post.json");
 
-        List<ToolCallback> callbacks = factory.buildTools(document);
+        List<ToolCallback> callbacks = this.factory.buildTools(spec, this.loader.load(spec));
 
         assertThat(callbacks).hasSize(1);
         assertThat(callbacks.get(0).getToolDefinition().name()).isEqualTo("json_postAnything");

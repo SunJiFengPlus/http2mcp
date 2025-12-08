@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
 
 import org.springframework.stereotype.Component;
 
@@ -20,16 +21,17 @@ public class OpenApiToolSchemaBuilder {
         this.objectMapper = objectMapper;
     }
 
-    public String buildSchema(OpenApiToolDescriptor descriptor) {
+    public String buildSchema(String toolName, List<Parameter> pathParameters, List<Parameter> queryParameters,
+            List<Parameter> headerParameters, Schema<?> requestBodySchema, boolean requestBodyRequired) {
         ObjectNode root = this.objectMapper.createObjectNode();
         root.put("type", "object");
         ObjectNode properties = root.putObject("properties");
         ArrayNode required = this.objectMapper.createArrayNode();
 
-        addParameters(descriptor.pathParameters(), properties, required);
-        addParameters(descriptor.queryParameters(), properties, required);
-        addParameters(descriptor.headerParameters(), properties, required);
-        addRequestBody(descriptor, properties, required);
+        addParameters(pathParameters, properties, required);
+        addParameters(queryParameters, properties, required);
+        addParameters(headerParameters, properties, required);
+        addRequestBody(requestBodySchema, requestBodyRequired, properties, required);
 
         if (!required.isEmpty()) {
             root.set("required", required);
@@ -38,23 +40,22 @@ public class OpenApiToolSchemaBuilder {
             return this.objectMapper.writeValueAsString(root);
         }
         catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed to serialize tool input schema for %s".formatted(
-                    descriptor.toolName()), ex);
+            throw new IllegalStateException(
+                    "Failed to serialize tool input schema for %s".formatted(toolName), ex);
         }
     }
 
-    private void addParameters(List<OpenApiToolDescriptor.OpenApiParameter> parameters, ObjectNode properties,
-            ArrayNode required) {
+    private void addParameters(List<Parameter> parameters, ObjectNode properties, ArrayNode required) {
         parameters.forEach(parameter -> applyParameterNode(parameter, properties, required));
     }
 
-    private void addRequestBody(OpenApiToolDescriptor descriptor, ObjectNode properties, ArrayNode required) {
-        Schema<?> schema = descriptor.requestBodySchema();
+    private void addRequestBody(Schema<?> schema, boolean requestBodyRequired, ObjectNode properties,
+            ArrayNode required) {
         if (schema == null) {
             return;
         }
         properties.set("body", schemaNode(schema, "HTTP request payload"));
-        if (descriptor.requestBodyRequired()) {
+        if (requestBodyRequired) {
             required.add("body");
         }
     }
@@ -76,11 +77,10 @@ public class OpenApiToolSchemaBuilder {
         return fallback;
     }
 
-    private void applyParameterNode(OpenApiToolDescriptor.OpenApiParameter parameter, ObjectNode properties,
-            ArrayNode required) {
-        properties.set(parameter.name(), schemaNode(parameter.schema(), parameter.description()));
-        if (parameter.required()) {
-            required.add(parameter.name());
+    private void applyParameterNode(Parameter parameter, ObjectNode properties, ArrayNode required) {
+        properties.set(parameter.getName(), schemaNode(parameter.getSchema(), parameter.getDescription()));
+        if (Boolean.TRUE.equals(parameter.getRequired())) {
+            required.add(parameter.getName());
         }
     }
 }

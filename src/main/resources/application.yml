@@ -11,9 +11,10 @@ spring:
       server:
         name: httpbin-mcp
         version: 1.0.0
-        base-url: http://localhost:${server.port}
-        sse-endpoint: /mcp/sse
-        sse-message-endpoint: /mcp/message
+        stdio: false
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
         capabilities:
           resource: false
           prompt: false

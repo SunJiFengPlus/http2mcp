@@ -1,7 +1,5 @@
 package org.apache.camel.examples.openapi;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
 import org.springframework.core.io.DefaultResourceLoader;
@@ -14,17 +12,11 @@ class OpenApiDocumentLoaderTest {
 
     @Test
     void shouldLoadYamlAndJsonDocuments() {
-        OpenApiSpecProperties properties = new OpenApiSpecProperties();
-        properties.setSpecs(List.of(spec("yaml", "classpath:/openapi/httpbin-query.yaml"),
-                spec("json", "classpath:/openapi/httpbin-post.json")));
+        OpenApiSpecProperties.Spec yamlSpec = spec("yaml", "classpath:/openapi/httpbin-query.yaml");
+        OpenApiSpecProperties.Spec jsonSpec = spec("json", "classpath:/openapi/httpbin-post.json");
 
-        List<OpenApiDocument> documents = loader.load(properties);
-
-        assertThat(documents).hasSize(2);
-        assertThat(documents)
-            .extracting(OpenApiDocument::id)
-            .containsExactlyInAnyOrder("yaml", "json");
-        assertThat(documents.get(0).openApi().getPaths()).isNotEmpty();
+        assertThat(this.loader.load(yamlSpec).getPaths()).isNotEmpty();
+        assertThat(this.loader.load(jsonSpec).getPaths()).containsKey("/anything");
     }
 
     private OpenApiSpecProperties.Spec spec(String id, String location) {
