@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info:
+  title: HttpBin Status
+  version: 1.0.0
+servers:
+  - url: https://httpbin.org
+paths:
+  /status/{code}:
+    get:
+      operationId: statusCheck
+      summary: Return requested status
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ok
