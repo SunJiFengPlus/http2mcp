@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: HttpBin 基础能力
+  version: 1.0.0
+servers:
+  - url: https://httpbin.org
+paths:
+  /get:
+    get:
+      operationId: httpbinGet
+      summary: 使用 GET 回显查询参数
+      parameters:
+        - name: message
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 需要回显的字符串
+      responses:
+        "200":
+          description: 正常返回
+          content:
+            application/json:
+              schema:
+                type: object
+  /anything:
+    post:
+      operationId: httpbinAnything
+      summary: 使用 POST 向 httpbin 发送 JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: 正常返回
+          content:
+            application/json:
+              schema:
+                type: object
+  /status/{code}:
+    get:
+      summary: 返回指定的 HTTP 状态码
+      operationId: httpbinStatus
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 成功

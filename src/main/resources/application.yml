@@ -4,3 +4,24 @@ server:
 spring:
   application:
     name: http2mcp
+  main:
+    web-application-type: reactive
+  ai:
+    mcp:
+      server:
+        name: httpbin-mcp
+        version: 1.0.0
+        stdio: false
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
+        capabilities:
+          resource: false
+          prompt: false
+          completion: false
+
+mcp:
+  openapi:
+    specs:
+      - id: httpbin
+        location: classpath:/openapi/httpbin-basic.yaml
