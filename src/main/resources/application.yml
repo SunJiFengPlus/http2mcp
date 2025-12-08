@@ -3,8 +3,4 @@ server:
 
 spring:
   application:
-    name: camel-mcp-demo
-
-camel:
-  springboot:
-    main-run-controller: true
+    name: http2mcp

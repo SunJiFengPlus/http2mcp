@@ -4,9 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CamelHttpDemoApplication {
+public class Http2McpApplication {
     
     public static void main(String[] args) {
-        SpringApplication.run(CamelHttpDemoApplication.class, args);
+        SpringApplication.run(Http2McpApplication.class, args);
     }
 }
